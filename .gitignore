@@ -210,3 +210,12 @@ autotest_result_*_junit.xml
 
 # macOS
 .DS_Store
+
+# CI ArduPilot upstream - tidak dipakai proyek ini.
+# 21 dari 28 workflow terpicu tiap push (build semua board, uji Copter/Rover/
+# Sub) dan menghabiskan kuota GitHub Actions, sementara dependabot.yml membuat
+# GitHub otomatis membuka PR pembaruan Action. Berkas tetap ada di disk dan di
+# branch main lokal, hanya tidak ikut dipublikasikan.
+/.github/workflows/
+/.github/dependabot.yml
+/.github/problem-matchers/
