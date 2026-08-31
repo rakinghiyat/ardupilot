@@ -1,7 +1,7 @@
 # SAKTI UAV — SITL
 
 Software-In-The-Loop simulation for the **sakti** UAV — a delta-wing aircraft with a
-gasoline pusher engine, launched from a catapult rail.
+gasoline pusher engine, launched from a catapult rail. For detailed information regarding configuration and installation, please check the following [document.](https://docs.google.com/document/d/19siUeQeCdIQxt7ukCM5R-BHRSZmPgmCg/edit?usp=sharing&ouid=103487947941562895750&rtpof=true&sd=true)
 
 This repository is derived from [ArduPilot](https://github.com/ArduPilot/ardupilot),
 with the addition of a JSBSim flight dynamics model, a Lua-based elevon mixer, a
