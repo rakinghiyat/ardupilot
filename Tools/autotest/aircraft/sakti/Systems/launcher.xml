@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<!--
+  ===================================================================
+  LAUNCHER STATE MACHINE - versi MURNI XML (tanpa modifikasi C++)
+  ===================================================================
+
+  KENAPA <system>, BUKAN <event>?
+  JSBSim hanya mem-parse <event> di dalam run-script (FGScript.cpp,
+  dari <run>). Tidak ada parser event saat memuat file pesawat, jadi
+  <event> di sakti.xml DIABAIKAN diam-diam. <system> DIBACA dari
+  file pesawat, sehingga logika latch dipindah ke sini.
+  Latch dibuat dengan <switch> yang membaca output-nya sendiri
+  (nilai property bertahan antar frame).
+
+  ===================================================================
+  URUTAN LAUNCH (meniru prosedur catapult UAV sungguhan)
+  ===================================================================
+    1. ARM di AUTO  -> fcs/launch-cmd  = 1  (latch)
+    2. ENGINE RUN-UP -> throttle dipaksa penuh selagi di rail
+                        (lihat channel Throttle di sakti.xml)
+    3. MESIN SIAP    -> fcs/launch-armed = 1 saat RPM >= 9500,
+                        catapult baru menembak
+    4. EXIT SPEED    -> fcs/launch-done  = 1 saat 35 m/s (114.83 fps),
+                        catapult lepas & throttle kembali ke ArduPilot
+
+  Kenapa run-up dulu baru tembak? Spool-up mesin butuh waktu.
+  Terukur di model ini (statis, throttle 0->100%):
+      t+0s: 823 RPM /  0.3 lb      t+1s: 9189 RPM / 40.9 lb
+      t+2s: 9901 RPM / 47.5 lb     t+3s: 9954 RPM / 47.9 lb (maks)
+  Kalau catapult menembak berbarengan dengan run-up, pesawat lepas
+  rail saat thrust masih ~0 -> kecepatan langsung meluruh
+  (terukur 35 -> 31 m/s dalam 1 detik).
+
+  Referensi dunia nyata: UAV catapult bermesin bensin dengan pusher
+  prop (kelas ScanEagle) menjalankan mesin sampai daya penuh SEBELUM
+  release; ScanEagle diuji "zip test" agar mesin tetap hidup saat
+  launch 12 g. Peringatan pusher-prop di dokumentasi ArduPilot
+  ditujukan untuk hand/bungee launch (risiko prop mengenai tangan/
+  tali), bukan rail catapult di mana prop sudah bebas.
+
+  CATATAN: ArduPilot punya TKOFF_THR_IDLE untuk run-up pra-launch,
+  TAPI tidak berfungsi di mode AUTO: flight_stage baru jadi TAKEOFF
+  kalau throttle TIDAK suppressed (Plane.cpp update_flight_stage),
+  sedangkan TKOFF_THR_IDLE hanya berlaku saat throttle suppressed
+  DAN stage TAKEOFF -> saling meniadakan. Karena itu run-up
+  dimodelkan di sisi JSBSim (realistis: di lapangan run-up memang
+  dilakukan kru/ECU launcher, bukan logika takeoff autopilot).
+
+  TRIGGER ARM: fcs/elevator-cmd-norm <= -0.9
+  Dikirim ArduPilot lewat stock send_servos (tanpa patch C++).
+  Terukur: disarmed -> 0.000 ; armed AUTO takeoff -> -1.000 (stabil).
+  Bukan throttle, karena ArduPlane menahan throttle (throttle
+  suppression) sampai pesawat bergerak -> deadlock.
+  ===================================================================
+-->
+<system name="Launcher">
+
+  <channel name="Launcher">
+
+    <!-- ============================================================
+         1. LAUNCH COMMAND (latch)
+         0 -> 1 saat ArduPilot arm di AUTO takeoff (elevator penuh).
+         Memulai engine run-up, BELUM menembakkan catapult.
+         ============================================================ -->
+    <switch name="fcs/launch-cmd">
+      <default value="0"/>
+      <test value="1">
+        fcs/launch-cmd gt 0.5
+      </test>
+      <test value="1">
+        fcs/elevator-cmd-norm le -0.9
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         2a. THROTTLE HANDOVER (latch)
+         Menandai ArduPilot sudah benar-benar mengambil alih throttle
+         (throttle suppression-nya lepas, perintah >= 50%).
+         Perlu karena setelah pesawat lepas rail, ArduPilot masih
+         menahan throttle ~2 detik sampai launch terdeteksi. Tanpa
+         latch ini ada CELAH: mesin spool-down (RPM 9500 -> 828,
+         terukur) lalu spool-up lagi, dan kecepatan meluruh
+         34.6 -> 29.4 m/s.
+         ============================================================ -->
+    <switch name="fcs/launch-thr-handover">
+      <default value="0"/>
+      <test value="1">
+        fcs/launch-thr-handover gt 0.5
+      </test>
+      <test value="1">
+        fcs/throttle-cmd-norm ge 0.5
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         2b. ENGINE RUN-UP
+         Aktif sejak launch command sampai ArduPilot mengambil alih
+         throttle. Jadi mesin tetap di daya launch selama run-up,
+         stroke catapult, DAN climb-out awal - tanpa celah.
+         Dipakai channel Throttle di sakti.xml.
+         ============================================================ -->
+    <switch name="fcs/launch-runup">
+      <default value="0"/>
+      <test logic="AND" value="1">
+        fcs/launch-cmd          gt 0.5
+        fcs/launch-thr-handover lt 0.5
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         3. LAUNCH ARMED (latch) - CATAPULT MENEMBAK
+         Menunggu mesin mencapai daya launch (RPM >= 9500 = ~95%
+         dari 9954 RPM maks), baru catapult dilepas.
+         ============================================================ -->
+    <switch name="fcs/launch-armed">
+      <default value="0"/>
+      <test value="1">
+        fcs/launch-armed gt 0.5
+      </test>
+      <test logic="AND" value="1">
+        fcs/launch-cmd                  gt 0.5
+        propulsion/engine[0]/engine-rpm ge 9500
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         4. LAUNCH DONE (latch)
+         0 -> 1 saat exit speed tercapai. Mematikan catapult &
+         mengembalikan throttle ke ArduPilot.
+
+         >>> UBAH KECEPATAN LAUNCH DI SINI <<<
+             Rumus: fps = kecepatan(m/s) x 3.28084
+             Nilai sekarang: 42 m/s x 3.28084 = 137.80 fps
+
+             KENAPA DINAIKKAN 35 -> 42 m/s (analisa log 00000050):
+               Pesawat baru sanggup MENANJAK pada ~37 m/s.
+               Setelah launch ia zoom sampai ~15 m, dan itu memakan
+               energi g*h = 147 m2/s2:
+                 keluar 35 m/s -> tersisa 30.5 m/s  KURANG -> menukik
+                 keluar 42 m/s -> tersisa 38.3 m/s  CUKUP
+               Dengan 35 m/s pesawat kehabisan kecepatan di puncak zoom,
+               lalu harus menukik ke tanah (turun 15 m, sempat 0.5 m dari
+               tanah) untuk mencari kecepatan sebelum bisa naik.
+             Ini KECEPATAN LEMPARAN LAUNCHER yang sebenarnya
+             (true airspeed), sesuai spesifikasi alat launcher.
+
+         JANGAN BINGUNG kalau log .bin menampilkan ~33.9 m/s:
+         ArduPilot mencatat EAS (equivalent airspeed) di
+         ARSP.Airspeed / CTUN.As, bukan kecepatan sebenarnya.
+         Di lapangan tinggi udaranya lebih tipis, jadi angin yang
+         "terasa" sensor lebih lemah daripada kecepatan aslinya.
+         Hubungannya:  EAS_di_log = kecepatan_asli / E2T
+         E2T terbaca di CTUN.E2T (1.033 di Batujajar, 657 m).
+         Jadi 35 m/s asli -> ~33.9 m/s di log. Itu NORMAL & BENAR.
+
+         Catatan: SIM_JSBSim.cpp menulis <elevation> dari home.alt ke
+         reset.xml, jadi JSBSim memakai densitas udara lapangan yang
+         benar (657 m di Batujajar), bukan permukaan laut. Selisih
+         ~3.3% antara angka JSBSim dan log ArduPilot murni berasal
+         dari EAS vs TAS di atas, bukan dari beda densitas.
+         ============================================================ -->
+    <switch name="fcs/launch-done">
+      <default value="0"/>
+      <test value="1">
+        fcs/launch-done gt 0.5
+      </test>
+      <test logic="AND" value="1">
+        fcs/launch-armed  gt 0.5
+        velocities/vt-fps ge 137.80
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         5. LAUNCH ACTIVE = armed AND (NOT done)
+         Gate gaya catapult di <external_reactions>.
+         ============================================================ -->
+    <switch name="fcs/launch-active">
+      <default value="0"/>
+      <test logic="AND" value="1">
+        fcs/launch-armed gt 0.5
+        fcs/launch-done  lt 0.5
+      </test>
+    </switch>
+
+  </channel>
+
+</system>

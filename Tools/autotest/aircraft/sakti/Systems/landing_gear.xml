@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<system name="Landing Gear">
+  <channel name="Landing Gear">
+   <switch name="fcs/gear-no-wow">
+     <default value="1"/>
+     <test logic="AND" value="0">
+         gear/unit[1]/WOW eq 1
+         gear/unit[2]/WOW eq 1
+     </test>
+   </switch>
+  </channel>
+
+  <channel name="Gear Drag State">
+    <!-- Airframe ini diluncurkan katapel dan TIDAK punya roda pendarat.
+         Contact BOGEY di <ground_reactions> memodelkan cradle/rail dan
+         semuanya <retractable>0</retractable>, jadi tidak terpengaruh.
+         gear/gear-pos-norm default JSBSim = 1 dan tidak pernah ditulis
+         siapa pun -> aero/force/Drag_gear (CD 0,030 = 37% seluruh drag)
+         aktif sepanjang penerbangan. -->
+    <pure_gain name="Gear Pos Zero">
+      <input>fcs/gear-no-wow</input>
+      <gain>0.0</gain>
+      <output>gear/gear-pos-norm</output>
+    </pure_gain>
+  </channel>
+
+</system>
+
+

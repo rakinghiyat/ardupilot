@@ -1,0 +1,1291 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="http://jsbsim.sourceforge.net/JSBSim.xsl"?>
+
+<fdm_config name="SAKTI170" version="2.0" release="ALPHA"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:noNamespaceSchemaLocation="http://jsbsim.sourceforge.net/JSBSim.xsd">
+
+  <fileheader>
+    <author> AeromatiC++ version 3.3.21 </author>
+    <filecreationdate> 08 Jun 2026 </filecreationdate>
+    <version>$Revision: 1.80 $</version>
+    <description> Models a SAKTI170 </description>
+  </fileheader>
+
+  <property value="0"> propulsion/starter_cmd      </property>
+  <property value="0"> propulsion/magneto_cmd       </property>
+  <property value="0"> fcs/throttle-cmd-norm        </property>
+  <property value="0"> fcs/throttle-pos-norm        </property>
+  <property value="1"> fcs/mixture-cmd-norm         </property>
+  <property value="0"> propulsion/engine/set-running </property>
+
+  <metrics>  <!-- Source from Kamikaze Three View Drawing Rev2_Sheet_1 -->
+
+    <wingarea  unit="M2">       1.92    </wingarea> <!-- Update from 3-view drawing -->
+    <wingspan  unit="M" >       1.838   </wingspan> <!-- Update from 3-view drawing -->
+    <wing_incidence unit="DEG"> 4.00    </wing_incidence> <!-- Update from 3-view drawing -->
+    <chord     unit="M" >       1.142    </chord> <!-- Update from 3-view drawing -->
+
+    <location name="AERORP" unit="M">
+      <x>   1.166    </x> <!-- Update 25% Wing MAC from 3-view drawing -->
+      <y>   0.00    </y>
+      <z>   0.00    </z>
+    </location>
+
+    <location name="EYEPOINT" unit="M">
+      <x>   0.00    </x>
+      <y>   0.00    </y>
+      <z>   0.00    </z>
+    </location>
+
+    <location name="VRP" unit="M">
+      <x>   0.00    </x>
+      <y>   0.00    </y>
+      <z>   0.00    </z>
+    </location>
+
+  </metrics>
+
+
+  <mass_balance> <!-- NEWEST UPDATE FROM WAB WITH TOW 50 KG CONFIG -->
+
+    <ixx unit="KG*M2">  9.83656    </ixx>
+    <iyy unit="KG*M2">  25.57606   </iyy>
+    <izz unit="KG*M2">  22.51018   </izz>
+    <ixy unit="KG*M2">  0.12984    </ixy>
+    <ixz unit="KG*M2">  3.63994    </ixz>
+    <iyz unit="KG*M2">  -0.00585   </iyz>
+    <emptywt unit="KG" >  25.325 </emptywt>  <!-- payload, fuel, and tank excluded -->
+    <location name="CG" unit="M">
+      <!-- <x> 1.01880    </x> -->
+      <x> 1.109    </x>
+      <y> -0.00233   </y>
+      <z> -0.01510   </z>
+    
+    </location>
+    <pointmass name="Payload">
+      <description> Update from Weight and Balance </description>
+      <weight unit="KG"> 15.00 </weight>
+      <location name="POINTMASS" unit="M">
+      <!-- <x> 0.450    </x> -->
+      <x> 0.934    </x>
+      <y> 0.000    </y>
+      <z> 0.013    </z>
+      <!-- <z>   0.0       </z> -->
+    </location>
+    </pointmass>
+
+  </mass_balance>
+
+
+  <propulsion>
+
+    <engine file="engine">
+      <location unit="M">
+          <x>   1.898773  </x> <!--masih Preliminary data asumsi-->
+          <y>   0.00      </y>
+          <z>   0.00      </z>
+      </location>
+      <orient unit="DEG">
+          <roll>    0.00    </roll>
+          <pitch>   0.00    </pitch>
+          <yaw>     0.00    </yaw>
+      </orient>
+      <feed> 0 </feed>
+
+      <thruster file="propeller">
+        <sense> 1 </sense>
+          <location unit="M">
+            <x>   2.04711   </x> <!--masih Preliminary data asumsi-->
+            <y>   0.00      </y>
+            <z>   0.0       </z>
+          </location>
+        <orient unit="DEG">
+          <pitch>   0.00    </pitch>
+          <roll>    0.00    </roll>
+          <yaw>     0.00    </yaw>
+        </orient>
+      </thruster>
+    </engine>
+
+    <!-- =================================================================
+         TANGKI BAHAN BAKAR
+         Isi tangki dibakar oleh FGPiston selama simulasi; massa & CG
+         pesawat ikut berkurang otomatis (tangki ada di depan CG, jadi
+         CG bergeser sedikit ke belakang saat bahan bakar habis).
+
+         <density> WAJIB diisi. Default FGTank adalah 6.6 LBS/GAL
+         (kelas JP-8), bukan bensin. AVGAS/pertamax = 6.02 LBS/GAL =
+         0.7213 kg/liter. Angka ini yang membuat 10 kg = 13.863 liter,
+         dan dipakai untuk menetapkan BATT2_CAPACITY = 13863 (mL) di
+         sakti.parm . Kalau densitas di sini diubah, BATT2_CAPACITY
+         harus ikut diubah.
+
+         <contents> SENGAJA sama dengan <capacity>: SIM_JSBSim.cpp
+         memakai isi tangki pada frame FDM pertama sebagai "penuh"
+         (paket FDM tidak membawa kapasitas). Kalau mau simulasi
+         berangkat dengan tangki tidak penuh, turunkan KEDUANYA.
+         ================================================================= -->
+    <tank type="FUEL"> <!-- Update from Weight and Balance Team -->
+      <location unit="M">
+        <x>     1.125  </x>
+        <y>    -0.003314 </y>
+        <!-- <z>    -0.02109 </z> -->
+        <z>   0.0       </z>
+      </location>
+      <density unit="LBS/GAL"> 6.02 </density>  <!-- bensin/AVGAS, 0.7213 kg/L -->
+      <capacity unit="KG"> 10.00 </capacity> 
+      <contents unit="KG"> 10.00 </contents> 
+    </tank>
+
+  </propulsion>
+
+  <ground_reactions>
+
+    <!-- ================================================================= -->
+    <!-- LAUNCH CRADLE / RAIL 30 deg                                        -->
+    <!-- Rail launcher dimodelkan sebagai ground contact: cara alami JSBSim -->
+    <!-- menahan pesawat (stabil 6-DOF, tanpa gaya buatan).                 -->
+    <!-- Kaki DEPAN panjang (z=-0.752), kaki BELAKANG pendek (z=-0.14)      -->
+    <!-- => pesawat duduk nose-up: atan(0.612/1.06) = 30 deg.               -->
+    <!-- Saat catapult menembak, pesawat meluncur & lepas dari cradle.      -->
+    <!-- ================================================================= -->
+    <contact type="BOGEY" name="NOSE">
+      <location unit="M">
+        <x>     0.34    </x>
+        <y>     0.00    </y>
+        <z>    -0.871   </z>
+      </location>
+      <static_friction>  0.80 </static_friction>
+      <dynamic_friction> 0.50 </dynamic_friction>
+      <rolling_friction> 0.02 </rolling_friction>
+      <spring_coeff  unit="N/M">      1892.00  </spring_coeff>
+      <damping_coeff unit="N/M/SEC">  293.00   </damping_coeff>
+      <max_steer unit="DEG"> 0.00 </max_steer>
+      <brake_group> NONE </brake_group>
+      <retractable> 0 </retractable>
+    </contact>
+    <contact type="BOGEY" name="LEFT_MAIN">
+      <location unit="M">
+        <x>     1.40    </x>
+        <y>    -0.75    </y>
+        <z>    -0.14    </z>
+      </location>
+      <static_friction>  0.80 </static_friction>
+      <dynamic_friction> 0.50 </dynamic_friction>
+      <rolling_friction> 0.02 </rolling_friction>
+      <spring_coeff  unit="N/M">      1594.00  </spring_coeff>
+      <damping_coeff unit="N/M/SEC">  797.00   </damping_coeff>
+      <max_steer unit="DEG">0</max_steer>
+      <brake_group> LEFT </brake_group>
+      <retractable> 0 </retractable>
+    </contact>
+    <contact type="BOGEY" name="RIGHT_MAIN">
+      <location unit="M">
+        <x>     1.40    </x>
+        <y>     0.75    </y>
+        <z>    -0.14    </z>
+      </location>
+      <static_friction>  0.80 </static_friction>
+      <dynamic_friction> 0.50 </dynamic_friction>
+      <rolling_friction> 0.02 </rolling_friction>
+      <spring_coeff  unit="N/M">      1594.00   </spring_coeff>
+      <damping_coeff unit="N/M/SEC">  797.00    </damping_coeff>
+      <max_steer unit="DEG">0</max_steer>
+      <brake_group> RIGHT </brake_group>
+      <retractable> 0 </retractable>
+    </contact>
+
+    <contact type="STRUCTURE" name="LEFT_WING">
+      <location unit="M">
+      <x>     1.838    </x>
+      <y>    -1.05        </y>
+      <z>     0.027126    </z>
+      </location>
+    <static_friction>  1 </static_friction>
+    <dynamic_friction> 1 </dynamic_friction>
+      <spring_coeff  unit="N/M">     1930.77  </spring_coeff>
+      <damping_coeff unit="N/M/SEC"> 965.39   </damping_coeff>
+    </contact>
+
+    <contact type="STRUCTURE" name="RIGHT_WING">
+      <location unit="M">
+      <x>     1.838     </x>
+      <y>     1.05        </y>
+      <z>     0.027126    </z>
+      </location>
+    <static_friction>  1 </static_friction>
+    <dynamic_friction> 1 </dynamic_friction>
+      <spring_coeff  unit="N/M">      1930.77   </spring_coeff>
+      <damping_coeff unit="N/M/SEC">  965.39    </damping_coeff>
+    </contact>
+
+  </ground_reactions>
+
+
+  <system file="controls.xml"/>
+  <system file="landing_gear.xml"/>
+  <system file="auto_engine"/>
+  <system file="launcher"/> 
+
+
+  <flight_control name="FCS: sakti">
+
+    <!-- ================================================================= -->
+    <!-- LAUNCHER STATE PROPERTIES                                         -->
+    <!-- Nilai di-latch oleh Systems/launcher.xml (bukan <event>, dan      -->
+    <!-- bukan dari SIM_JSBSim.cpp - versi ini murni XML).                 -->
+    <!--   launch-armed  : latch, 1 saat elevator nose-up penuh (ArduPilot -->
+    <!--                   arm di AUTO takeoff)                            -->
+    <!--   launch-done   : latch, 1 saat exit speed 35 m/s tercapai        -->
+    <!--   launch-active : armed AND NOT done -> gate gaya catapult        -->
+    <!-- ================================================================= -->
+    <property value="0"> fcs/launch-armed    </property>
+    <property value="0"> fcs/launch-done     </property>
+    <property value="0"> fcs/launch-active   </property>
+
+    <channel name="Throttle">
+      <!-- ============================================================
+           ENGINE RUN-UP PRA-LAUNCH
+           Selama fcs/launch-runup = 1 (sudah di-arm tapi belum lepas
+           rail), throttle dipaksa penuh supaya mesin mencapai daya
+           launch sebelum catapult menembak - meniru prosedur run-up
+           kru launcher. Di luar itu, throttle mengikuti ArduPilot.
+           ArduPilot sendiri tidak bisa melakukan ini di mode AUTO
+           (TKOFF_THR_IDLE terkunci catch-22, lihat Systems/launcher.xml).
+           ============================================================ -->
+      <switch name="fcs/throttle-pos-norm">
+        <default value="fcs/throttle-cmd-norm"/>
+        <test value="1.0">
+          fcs/launch-runup gt 0.5
+        </test>
+      </switch>
+    </channel>
+
+  </flight_control>
+
+  <!-- ================================================================= -->
+  <!-- LAUNCHER TRIGGER                                                  -->
+  <!--                                                                   -->
+  <!-- <event> DIHAPUS dari sini: JSBSim hanya mem-parse <event> di      -->
+  <!-- run-script (FGScript.cpp, dari elemen <run>). Tidak ada parser    -->
+  <!-- event saat memuat file pesawat, jadi <event> di sini diabaikan    -->
+  <!-- diam-diam - itulah sebabnya catapult dulu tidak pernah menembak.  -->
+  <!--                                                                   -->
+  <!-- Logika latch sekarang di Systems/launcher.xml (<system> DIBACA    -->
+  <!-- dari file pesawat), di-trigger oleh fcs/elevator-cmd-norm yang    -->
+  <!-- dikirim ArduPilot lewat stock send_servos - tanpa patch C++.      -->
+  <!-- ================================================================= -->
+
+ <aerodynamics>
+
+  <property value="0"> sim/sitl-frame-counter </property>
+
+
+  <!-- ================================================= -->
+  <!--                       LIFT                        -->
+  <!-- ================================================= -->
+  <axis name="LIFT">
+
+    <function name="aero/force/Lift_propwash"> <!--masih Preliminary data asumsi-->
+      <description>Delta lift due to propeller induced velocity</description>
+      <product>
+        <property>propulsion/engine[0]/thrust-coefficient</property>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">fcs/flap-pos-deg</independentVar>
+          <tableData>
+                   0.0      60.0
+            -1.57  0.000    0.000
+            -0.57  0.005    0.013
+            -0.20  0.015    0.040
+            -0.10  0.022    0.058
+             0.00  0.027    0.072
+             0.06  0.030    0.080
+             0.15  0.025    0.067
+             0.30  0.015    0.040
+             0.52  0.005    0.013
+             1.57  0.000    0.000
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Lift_alpha">
+      <description>Lift due to alpha (VLAero Update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            -1.0472  -0.8600
+            -0.8727  -1.0000
+            -0.0873  -0.12638
+             0.0000   0.10686
+             0.0262   0.17669
+             0.0524   0.24656
+             0.0785   0.31653
+             0.1047   0.38670
+             0.1309   0.45705
+             0.1571   0.52774
+             0.1833   0.59874
+             0.2094   0.67023
+             0.2356   0.74223
+             0.2618   0.81482
+             0.8727   1.0000
+             1.0472   0.8700
+             1.2217   0.6460
+             1.5708   0.0000
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Lift_pitch_rate">
+      <description>Lift due to pitch rate (VLAero Update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>velocities/q-aero-rad_sec</property>
+        <property>aero/ci2vel</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            -0.08727   2.57961
+             0.00000   2.57964
+             0.02618   2.57816
+             0.05236   2.57590
+             0.07854   2.57335
+             0.10472   2.57099
+             0.13090   2.57305
+             0.15708   2.56518
+             0.18326   2.56861
+             0.20944   2.55849
+             0.23562   2.55519
+             0.26180   2.55177
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Lift_alpha_rate"> <!--masih Preliminary data asumsi-->
+      <description>Lift due to alpha rate</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>aero/alphadot-rad_sec</property>
+        <property>aero/ci2vel</property>
+        <value> 1.3330 </value>
+      </product>
+    </function>
+
+    <!-- Lift dari inboard elevon (elevator function) -->
+    <function name="aero/force/Lift_inboard">
+      <description>Lift due to inboard elevon deflection (VLAero Update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <sum>
+          <property>fcs/left-inboard-pos-rad</property>
+          <property>fcs/right-inboard-pos-rad</property>
+        </sum>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.21543
+            0.174533   0.23319
+            0.261799   0.23777
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <!-- Lift dari outboard elevon (pitch component) -->
+    <function name="aero/force/Lift_outboard">
+      <description>Lift due to outboard elevon deflection (VLAero Update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <sum>
+          <property>fcs/left-outboard-pos-rad</property>
+          <property>fcs/right-outboard-pos-rad</property>
+        </sum>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.24351
+            0.174533   0.24183
+            0.261799   0.23778
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+  </axis>
+
+  <!-- ================================================= -->
+  <!--                        DRAG                       -->
+  <!-- ================================================= -->
+  <axis name="DRAG">
+
+    <function name="aero/force/Drag_minimum">
+      <description>Minimum drag (zeros due to VLAero)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <value> 0.01670 </value> <!-- update 210726, 15:30 -->
+      </product>
+    </function>
+
+    <function name="aero/force/Drag_alpha">
+      <description>Drag due to alpha (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            -0.08727   0.00163
+             0.00000   0.00146
+             0.02618   0.00369
+             0.05236   0.00699
+             0.07854   0.01135
+             0.10472   0.01676
+             0.13090   0.02323
+             0.15708   0.03076
+             0.18326   0.03934
+             0.20944   0.04898
+             0.23562   0.05969
+             0.26180   0.07145
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Drag_induced">
+      <description>Induced drag (zeros due to VLAero)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>aero/cl-squared</property>
+        <value> 0.08 </value> <!-- update 210726, 15:30 -->
+      </product>
+    </function>
+
+    <!-- dihilangkan karna relatif ni effect -->
+    <!-- <function name="aero/force/Drag_mach"> 
+      <description>Drag due to mach</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <table>
+          <independentVar lookup="row">velocities/mach</independentVar>
+          <tableData>
+            0.00  0.0000
+            0.70  0.0000
+            1.10  0.0230
+            1.80  0.0150
+          </tableData>
+        </table>
+      </product>
+    </function> -->
+
+    <function name="aero/force/Drag_beta"> <!--masih Preliminary data asumsi-->
+      <description>Drag due to sideslip</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <table>
+          <independentVar lookup="row">aero/beta-rad</independentVar>
+          <tableData>
+            -1.57  1.2300
+            -0.26  0.0500
+             0.00  0.0000
+             0.26  0.0500
+             1.57  1.2300
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <!-- Drag from all surface -->
+    <function name="aero/force/Drag_surfaces"> <!--masih Preliminary data asumsi-->
+      <description>Drag due to all control surface deflection</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <value> 0.0200 </value>
+        <sum>
+          <abs><property>fcs/left-outboard-pos-rad</property></abs>
+          <abs><property>fcs/right-outboard-pos-rad</property></abs>
+          <abs><property>fcs/left-inboard-pos-rad</property></abs>
+          <abs><property>fcs/right-inboard-pos-rad</property></abs>
+        </sum>
+      </product>
+    </function>
+
+    <function name="aero/force/Drag_gear"> <!--masih Preliminary data asumsi-->
+      <description>Drag due to gear</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>gear/gear-pos-norm</property>
+        <value> 0.00 </value>
+      </product>
+    </function>
+
+  </axis>
+
+  <!-- ================================================= -->
+  <!--                        SIDE                       -->
+  <!-- ================================================= -->
+  <axis name="SIDE">
+
+    <function name="aero/force/Side_beta">
+      <description>Side force due to beta (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>aero/beta-rad</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   -0.20649
+            0.174533   -0.20649
+            0.261799   -0.20649
+          </tableData>
+         </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Side_roll_rate">
+      <description>Side force due to roll rate (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/p-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                       -0.087266   0.00000    0.087266
+            0.087266   -0.25759   -0.25772   -0.25772
+            0.174533   -0.25751   -0.25791   -0.25791
+            0.261799   -0.25747   -0.25791   -0.25790
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/force/Side_yaw_rate">
+      <description>Side force due to yaw rate (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/r-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                      -0.087266   0.000000   0.087266
+            0.087266   0.16482    0.16468    0.16468
+            0.174533   0.16494    0.16454    0.16454
+            0.261799   0.16496    0.16453    0.16453
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <!-- Side force dari rudder kemungkinan tidak digunakan karena delta wing tidak punya rudder -->
+
+    <!-- Yaw control dari differential elevon jika diperlukan -->
+
+    <!-- <function name="aero/force/Side_rudder">
+       <description>Side force due to rudder</description>
+       <product>
+           <property>aero/qbar-psf</property>
+           <property>metrics/Sw-sqft</property>
+           <property>fcs/rudder-pos-rad</property>
+           <value> 0.1407 </value>
+       </product>
+    </function> -->
+
+  </axis>
+
+  <!-- ================================================= -->
+  <!--                        PITCH                      -->
+  <!-- ================================================= -->
+  <axis name="PITCH">
+
+    <function name="aero/moment/Pitch_propwash"> <!--masih Preliminary data asumsi-->
+      <description>Pitch moment due to propeller induced velocity</description>
+      <product>
+        <property>propulsion/engine[0]/thrust-coefficient</property>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">fcs/flap-pos-deg</independentVar>
+          <tableData>
+                   0.0      60.0
+            -1.57  0.0000   0.0000
+            -0.57 -0.0008  -0.0020
+            -0.20 -0.0022  -0.0058
+            -0.10 -0.0033  -0.0087
+             0.00 -0.0043  -0.0102
+             0.06 -0.0048  -0.0120
+             0.15 -0.0038  -0.0101
+             0.30 -0.0022  -0.0058
+             0.52 -0.0008  -0.0020
+             1.57  0.0000   0.0000
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Pitch_alpha">
+      <description>Pitch moment due to alpha(VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <table>
+          <independentVar lookup="row">
+            aero/alpha-rad
+          </independentVar>
+          <tableData>
+            -0.0873   0.02508
+             0.0000   0.01846
+             0.0262   0.01635
+             0.0524   0.01419
+             0.0785   0.01197
+             0.1047   0.00969
+             0.1309   0.00736
+             0.1571   0.00497
+             0.1833   0.00252
+             0.2094   0.00001
+             0.2356  -0.00256
+             0.2618  -0.00520
+          </tableData>
+         </table>
+      </product>
+    </function>
+
+    <!-- Pitch dari inboard elevon (elevator utama) -->
+    <function name="aero/moment/Pitch_inboard">
+      <description>Pitch moment due to inboard elevon (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <sum>
+          <property>fcs/left-inboard-pos-rad</property>
+          <property>fcs/right-inboard-pos-rad</property>
+        </sum>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.07792
+            0.174533   0.07792
+            0.261799   0.07792
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <!-- Pitch dari outboard elevon (pitch component dari elevon) -->
+    <function name="aero/moment/Pitch_outboard">
+      <description>Pitch moment due to outboard elevon symmetric deflection (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <sum>
+          <property>fcs/left-outboard-pos-rad</property>
+          <property>fcs/right-outboard-pos-rad</property>
+        </sum>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.09511
+            0.174533   0.09511
+            0.261799   0.09568
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+     <function name="aero/moment/Pitch_damp">
+      <description>Pitch moment due to pitch rate (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <property>aero/ci2vel</property>
+        <property>velocities/q-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            -0.08727   -0.72050
+             0.00000   -0.72307
+             0.02618   -0.72386
+             0.05236   -0.72464
+             0.07854   -0.72542
+             0.10472   -0.72624
+             0.13090   -0.72695
+             0.15708   -0.72780
+             0.18326   -0.72846
+             0.20944   -0.72932
+             0.23562   -0.73015
+             0.26180   -0.73099
+          </tableData>
+         </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Pitch_alphadot"> <!--masih Preliminary data asumsi-->
+      <description>Pitch moment due to alpha rate</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/cbarw-ft</property>
+        <property>aero/ci2vel</property>
+        <property>aero/alphadot-rad_sec</property>
+        <value> -2.1600 </value>
+      </product>
+    </function>
+
+  </axis>
+
+  <!-- ================================================= -->
+  <!--                        ROLL                       -->
+  <!-- ================================================= -->
+  <axis name="ROLL">
+
+    <function name="aero/moment/Roll_yaw">
+      <description>Roll moment due to yaw rate (VLAero update) </description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/r-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                       -0.087266   0.000000   0.087266
+            0.087266    0.08063    0.08064    0.08064
+            0.174533    0.07584    0.07508    0.07507
+            0.261799    0.07016    0.06928    0.06924
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Roll_damp">
+      <description>Roll moment due to roll rate(VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/p-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                       -0.087266   0.000000   0.087266
+            0.087266   -0.32643   -0.32643   -0.32642
+            0.174533   -0.31524   -0.31603   -0.31600
+            0.261799   -0.30273   -0.30370   -0.30362
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Roll_beta">
+      <description>Roll moment due to beta (dihedral effect)(VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/beta-rad</property>
+        <property>fcs/gear-no-wow</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   -0.10497
+            0.174533   -0.10325
+            0.261799   -0.10417
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Roll_outboard_elevon">
+      <description>Roll moment due to differential outboard elevon (VLAero update) </description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <difference>
+          <property>fcs/left-outboard-pos-rad</property>
+          <property>fcs/right-outboard-pos-rad</property>
+        </difference>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   -0.07334
+            0.174533   -0.07162
+            0.261799   -0.06933
+          </tableData>
+        </table>
+        <!-- negatif: LO>RO → roll kiri -->
+        <!-- <table>
+          <independentVar lookup="row">velocities/mach</independentVar>
+          <tableData>
+            0.0  -0.2500   
+            0.6  -0.2500
+            1.0  -0.1000
+            2.0  -0.0625
+          </tableData>
+        </table> -->
+      </product>
+    </function>
+
+  </axis>
+
+  <!-- ================================================= -->
+  <!--                        YAW                        -->
+  <!-- ================================================= -->
+  <axis name="YAW">
+
+    <function name="aero/moment/Yaw_beta">
+      <description>Yaw moment due to beta (weathercock stability)(VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/beta-rad</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.05317
+            0.174533   0.04377
+            0.261799   0.03381
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Yaw_damp">
+      <description>Yaw moment due to yaw rate (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/r-aero-rad_sec</property>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                       -0.087266   0.000000   0.087266
+            0.087266   -0.06192   -0.06185   -0.06190
+            0.174533   -0.06768   -0.06742   -0.06751
+            0.261799   -0.07304   -0.07266   -0.07278
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <function name="aero/moment/Yaw_roll_rate">
+      <description>Yaw moment due to roll rate (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/bi2vel</property>
+        <property>velocities/p-rad_sec</property>
+         <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <independentVar lookup="column">aero/beta-rad</independentVar>
+          <tableData>
+                        -0.087266   0.000000   0.087266
+            0.087266     0.11588    0.11581    0.11593
+            0.174533     0.13959    0.13961    0.13981
+            0.261799     0.16263    0.16269    0.16297
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+
+    <!--
+      Adverse yaw dari differential outboard:
+      LO > RO → roll kiri → induced yaw kanan (positif)
+      Koefisien positif karena difference(LO-RO) positif saat roll kiri
+      dan adverse yaw kanan = positif
+    -->
+    <function name="aero/moment/Yaw_adverse_outboard">
+      <description>Adverse yaw due to differential outboard elevon (VLAero update)</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <difference>
+          <property>fcs/left-outboard-pos-rad</property>
+          <property>fcs/right-outboard-pos-rad</property>
+        </difference>
+        <table>
+          <independentVar lookup="row">aero/alpha-rad</independentVar>
+          <tableData>
+            0.087266   0.02005
+            0.174533   0.02521
+            0.261799   0.03094
+          </tableData>
+        </table>
+      </product>
+    </function>
+
+    <!-- Stall initiator — pertahankan untuk spin recovery -->
+    <!-- <function name="aero/moment/Yaw_alpha">
+      <description>Yaw moment due to alpha near stall</description>
+      <product>
+        <property>aero/qbar-psf</property>
+        <property>metrics/Sw-sqft</property>
+        <property>metrics/bw-ft</property>
+        <property>aero/alpha-rad</property>
+        <property>fcs/gear-no-wow</property>
+        <table>
+          <independentVar lookup="row">aero/beta-rad</independentVar>
+          <independentVar lookup="column">aero/Re</independentVar>
+          <tableData>
+                          1955283  2150812
+              -0.3491     -1.0000   0.0000
+               0.3491      1.0000   0.0000
+          </tableData>
+        </table>
+      </product>
+    </function> -->
+
+  </axis>
+ 
+  <!-- ===================================================== -->
+  <!--                  LEFT INBOARD (LI)                    -->
+  <!-- ===================================================== -->
+  <function name="aero/coefficient/Cm_hinge_LI">
+    <description>Estimated hinge moment coefficient - Left Inboard elevon (VLAero update)</description>
+    <table>
+        <independentVar lookup="row">aero/alpha-rad</independentVar>
+        <independentVar lookup="column">fcs/left-inboard-pos-rad</independentVar>
+        <tableData>
+                       -0.2094  -0.1571  -0.1047  -0.0524   0.0000   0.0524    0.1047    0.1571    0.2094
+            0.0873      0.19845  0.17474  0.13754  0.10033  0.06311  0.02591  -0.01130  -0.04850  -0.07223
+            0.1745      0.18260  0.15892  0.12170  0.08450  0.04731  0.01007  -0.02712  -0.06432  -0.08804
+            0.2618      0.16678  0.14307  0.10587  0.06866  0.03145 -0.00577  -0.04296  -0.08021  -0.10386
+        </tableData>
+    </table>
+  </function>
+
+  <function name="aero/moment/Hinge_torque_LI_kgcm">
+    <product>
+      <property>aero/qbar-psf</property>
+      <value>0.840</value>   <!-- luas surface feet^2 -->
+      <value>0.655</value>   <!-- chord referensi/MAC ft -->
+      <property>aero/coefficient/Cm_hinge_LI</property>
+      <value>13.8255</value>
+    </product>
+  </function>
+ 
+  <!-- ===================================================== -->
+  <!--                 RIGHT INBOARD (RI)                   -->
+  <!-- ===================================================== -->
+  <function name="aero/coefficient/Cm_hinge_RI">
+    <description>Estimated hinge moment coefficient - Right Inboard elevon (VLAero update)</description>
+    <table>
+        <independentVar lookup="row">aero/alpha-rad</independentVar>
+        <independentVar lookup="column">fcs/right-inboard-pos-rad</independentVar>
+        <tableData>
+                       -0.2094  -0.1571  -0.1047  -0.0524   0.0000   0.0524    0.1047    0.1571    0.2094
+            0.0873      0.19845  0.17474  0.13754  0.10033  0.06311  0.02591  -0.01130  -0.04850  -0.07223
+            0.1745      0.18260  0.15892  0.12170  0.08450  0.04731  0.01007  -0.02712  -0.06432  -0.08804
+            0.2618      0.16678  0.14307  0.10587  0.06866  0.03145 -0.00577  -0.04296  -0.08021  -0.10386
+        </tableData>
+    </table>
+  </function>
+ 
+  <function name="aero/moment/Hinge_torque_RI_kgcm">
+    <product>
+      <property>aero/qbar-psf</property>
+      <value>0.840</value>   <!-- luas surface feet^2 -->
+      <value>0.655</value>   <!-- chord referensi/MAC ft -->
+      <property>aero/coefficient/Cm_hinge_RI</property>
+      <value>13.8255</value>
+    </product>
+  </function>
+ 
+  <!-- ===================================================== -->
+  <!--                 LEFT OUTBOARD (LO)                    -->
+  <!-- ===================================================== -->
+  <function name="aero/coefficient/Cm_hinge_LO">
+    <description>Estimated hinge moment coefficient - Left Outboard elevon (VLAero update)</description>
+    <table>
+        <independentVar lookup="row">aero/alpha-rad</independentVar>
+        <independentVar lookup="column">fcs/left-outboard-pos-rad</independentVar>
+        <tableData>
+                      -0.2094  -0.1571  -0.1047  -0.0524   0.0000   0.0524   0.1047   0.1571   0.2094
+            0.0873     0.10091  0.08305  0.06436  0.04419  0.02401  0.00382 -0.01636 -0.03654 -0.05290
+            0.1745     0.08491  0.06704  0.04837  0.02820  0.00800 -0.01218 -0.03236 -0.05253 -0.06891
+            0.2618     0.06891  0.05105  0.03235  0.01217 -0.00800 -0.02820 -0.04836 -0.06855 -0.08492
+        </tableData>
+    </table>
+  </function>
+ 
+  <function name="aero/moment/Hinge_torque_LO_kgcm">
+    <product>
+      <property>aero/qbar-psf</property>
+	    <value>0.662</value>   <!-- luas surface feet^2 -->
+      <value>0.553</value>   <!-- chord referensi/MAC ft -->
+      <property>aero/coefficient/Cm_hinge_LO</property>
+      <value>13.8255</value>
+    </product>
+  </function>
+ 
+  <!-- ===================================================== -->
+  <!--                RIGHT OUTBOARD (RO)                    -->
+  <!-- ===================================================== -->
+  <function name="aero/coefficient/Cm_hinge_RO">
+    <description>Estimated hinge moment coefficient - Right Outboard elevon (VLAero update)</description>
+    <table>
+        <independentVar lookup="row">aero/alpha-rad</independentVar>
+        <independentVar lookup="column">fcs/right-outboard-pos-rad</independentVar>
+        <tableData>
+                      -0.2094  -0.1571  -0.1047  -0.0524   0.0000   0.0524   0.1047   0.1571   0.2094
+            0.0873     0.10091  0.08305  0.06436  0.04419  0.02401  0.00382 -0.01636 -0.03654 -0.05290
+            0.1745     0.08491  0.06704  0.04837  0.02820  0.00800 -0.01218 -0.03236 -0.05253 -0.06891
+            0.2618     0.06891  0.05105  0.03235  0.01217 -0.00800 -0.02820 -0.04836 -0.06855 -0.08492
+        </tableData>
+    </table>
+  </function>
+ 
+  <function name="aero/moment/Hinge_torque_RO_kgcm">
+    <product>
+      <property>aero/qbar-psf</property>
+	    <value>0.662</value>   <!-- luas surface feet^2 -->
+      <value>0.553</value>   <!-- chord referensi/MAC ft -->
+      <property>aero/coefficient/Cm_hinge_RO</property>
+      <value>13.8255</value>
+    </product>
+  </function>
+
+</aerodynamics>
+
+ <external_reactions>
+
+    <!-- ================================================= -->
+    <!-- LAUNCHER / CATAPULT SYSTEM                        -->
+    <!-- Spesifikasi:                                      -->
+    <!--   Massa (empty 25,325 + payload 15 + fuel 10)     -->
+    <!--                                : 50,325 kg        -->
+    <!--   Sudut rail (nose up)       : 30 deg (cradle)   -->
+    <!--   Exit speed (Vlo)           : 42 m/s (137.80 fps)-->
+    <!--     (disetel di Systems/launcher.xml, bukan di sini)-->
+    <!--   Gaya konstan 875 lbf (~3892 N) =>               -->
+    <!--     a = 3892/50,325 = 77,3 m/s2 (~7,9 g)          -->
+    <!--     PANJANG RAIL ~11,4 m, stroke ~0.54 s          -->
+    <!--   (rail = jarak tempuh selama catapult aktif;     -->
+    <!--    diukur dgn integrasi kecepatan, bukan dimodel- -->
+    <!--    kan sbg constraint fisik. Gaya lebih kecil =   -->
+    <!--    rail lebih panjang: 1300 lbf ~= 6.5 m)         -->
+    <!--                                                   -->
+    <!-- Trigger: fcs/launch-active dari Systems/launcher.xml -->
+    <!--   = launch-armed AND NOT launch-done              -->
+    <!--   - Sebelum launch  : 0 -> gaya 0                 -->
+    <!--   - Selama stroke   : 1 -> 875 lbf                -->
+    <!--   - Setelah 35 m/s  : 0 -> gaya 0 (latch, tidak   -->
+    <!--     re-fire saat pesawat sudah di udara)          -->
+    <!-- ================================================= -->
+
+    <force name="catapult" frame="BODY">
+      <function name="forces/catapult-lbs">
+        <product>
+          <property>fcs/launch-active</property>
+          <value> 875 </value>
+        </product>
+      </function>
+      <location unit="M">
+        <x> 1.10 </x>
+        <y> 0.00 </y>
+        <z> 0.00 </z>
+      </location>
+      <direction>
+        <x> 1 </x>
+        <y> 0 </y>
+        <z> 0 </z>
+      </direction>
+    </force>
+
+    <!-- ================================================= -->
+    <!-- LAUNCH RAIL CONSTRAINT                            -->
+    <!-- Redam gerak lateral selama pesawat masih di rail  -->
+    <!-- (aktif hanya selama stroke: armed & belum done)   -->
+    <!-- ================================================= -->
+
+    <force name="rail_side" frame="BODY">
+      <function name="forces/rail-side-lbs">
+        <product>
+          <property>fcs/launch-active</property>
+          <value> -2.0 </value>
+          <property>velocities/v-fps</property>
+        </product>
+      </function>
+      <location unit="M">
+        <x> 1.10 </x>
+        <y> 0.00 </y>
+        <z> 0.00 </z>
+      </location>
+      <direction>
+        <x> 0 </x>
+        <y> 1 </y>
+        <z> 0 </z>
+      </direction>
+    </force>
+
+  </external_reactions>
+
+  <!-- rate = jumlah baris data per detik.
+       Tanpa atribut ini JSBSim memakai default 1 data/detik - terlalu
+       kasar untuk menganalisa launch (stroke catapult hanya ~0.55 detik).
+       rate="10" = 10 data/detik (tiap 0.1 detik).
+       Naikkan ke 50-200 kalau perlu melihat transien yang sangat cepat,
+       tapi ukuran file ikut membengkak. -->
+  <output name="sakti-jsbsim.csv" type="CSV" rate="100">
+
+    <!-- DEBUG TRIM -->
+    <property>fcs/antitorque-lo</property>
+    <property>fcs/antitorque-ro</property>
+    <property>fcs/aileron-cmd-norm</property>
+    <property>propulsion/engine/propeller-torque-ftlb</property>
+
+    <!-- LAUNCHER STATE (debug) -->
+    <property>fcs/launch-cmd</property>
+    <property>fcs/launch-runup</property>
+    <property>fcs/elevator-cmd-norm</property>
+    <property>fcs/launch-armed</property>
+    <property>fcs/launch-done</property>
+    <property>fcs/launch-active</property>
+    <property>forces/catapult-lbs</property>
+
+
+    <!-- SIMULATION TIME / FRAME -->
+    <property>sim/sitl-frame-counter</property>
+
+    <!-- PROPULSION -->
+    <property>propulsion/engine[0]/engine-rpm</property>
+    <property>propulsion/engine[0]/thrust-lbs</property>
+    <property>fcs/throttle-cmd-norm</property>
+    <property>fcs/throttle-pos-norm</property>
+    <property>forces/fbx-prop-lbs</property>
+
+    <!-- ENGINE STATUS -->
+    <property>propulsion/starter_cmd</property>
+    <property>propulsion/magneto_cmd</property>
+    <property>fcs/mixture-cmd-norm</property>
+    <property>fcs/mixture-pos-norm</property>
+    <property>propulsion/engine[0]/AFR</property>
+
+    <!-- BAHAN BAKAR
+         fuel-flow-rate-pps = pound/detik. kg/jam = nilai x 1633.0
+         contents-lbs       = isi tangki (pound). kg = nilai x 0.4536
+         weight-lbs turun mengikuti bahan bakar yang terbakar, dan CG
+         ikut bergeser karena tangki tidak berada di titik CG. -->
+    <property>propulsion/engine[0]/fuel-flow-rate-pps</property>
+    <property>propulsion/engine[0]/fuel-flow-rate-gph</property>
+    <property>propulsion/engine[0]/power-hp</property>
+    <property>propulsion/tank[0]/contents-lbs</property>
+    <property>propulsion/tank[0]/pct-full</property>
+    <property>propulsion/total-fuel-lbs</property>
+    <property>inertia/weight-lbs</property>
+    <property>inertia/cg-x-in</property>
+
+    <!-- SURFACE COMMAND -->
+    <property>fcs/left-outboard-cmd-norm</property>
+    <property>fcs/right-outboard-cmd-norm</property>
+    <property>fcs/left-inboard-cmd-norm</property>
+    <property>fcs/right-inboard-cmd-norm</property>
+
+    <!-- SURFACE POSITION (DEG? -->
+    <property>fcs/left-outboard-pos-deg</property>
+    <property>fcs/right-outboard-pos-deg</property>
+    <property>fcs/left-inboard-pos-deg</property>
+    <property>fcs/right-inboard-pos-deg</property>
+
+    <!-- AIRCRAFT ATTITUDE -->
+    <property>attitude/pitch-deg</property>
+    <property>attitude/roll-deg</property>
+
+
+    <!-- FLIGHT CONDITION
+    Menentukan kondisi saat hinge torque muncul -->
+    <property>aero/alpha-deg</property>
+    <property>aero/beta-deg</property>
+
+    <!-- AIRSPEED -->
+    <property>velocities/vc-kts</property>
+    <property>velocities/vtrue-kts</property>
+
+    <!-- DYNAMIC PRESSURE -->
+    <property>aero/qbar-psf</property>
+
+    <!-- ANGULAR RATES -->
+    <property>velocities/p-aero-rad_sec</property>
+    <property>velocities/q-aero-rad_sec</property>
+    <property>velocities/r-aero-rad_sec</property>
+
+    <!-- LOAD FACTOR (G LOAD) -->
+    <property>accelerations/n-pilot-z-norm</property>
+
+    <!-- ANGULAR ACCELERATION -->
+    <property>accelerations/pdot-rad_sec2</property>
+    <property>accelerations/qdot-rad_sec2</property>
+    <property>accelerations/rdot-rad_sec2</property>
+
+    <!-- AERODYNAMIC FORCES -->
+    <property>forces/fbx-aero-lbs</property>
+    <property>forces/fby-aero-lbs</property>
+    <property>forces/fbz-aero-lbs</property>
+
+    <!-- AERODYNAMIC MOMENTS -->
+    <property>moments/l-aero-lbsft</property>
+    <property>moments/m-aero-lbsft</property>
+    <property>moments/n-aero-lbsft</property>
+
+    <!-- CUSTOM ELEVON MOMENTS -->
+    <property>aero/moment/Pitch_inboard</property>
+    <property>aero/moment/Pitch_outboard</property>
+    <property>aero/moment/Roll_outboard_elevon</property>
+
+    <!-- HINGE MOMENT COEFFICIENT -->
+    <property>aero/coefficient/Cm_hinge_LI</property>
+    <property>aero/coefficient/Cm_hinge_RI</property>
+    <property>aero/coefficient/Cm_hinge_LO</property>
+    <property>aero/coefficient/Cm_hinge_RO</property>
+
+    <!-- HINGE TORQUE -->
+    <property>aero/moment/Hinge_torque_LI_kgcm</property>
+    <property>aero/moment/Hinge_torque_RI_kgcm</property>
+    <property>aero/moment/Hinge_torque_LO_kgcm</property>
+    <property>aero/moment/Hinge_torque_RO_kgcm</property>
+
+  </output>
+
+
+</fdm_config>

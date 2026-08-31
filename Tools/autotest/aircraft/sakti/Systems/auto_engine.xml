@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+
+<!--
+  auto_engine - starter / magneto / mixture otomatis.
+
+  ===================================================================
+  KOMPENSASI MIXTURE TERHADAP KETINGGIAN  -  PENTING
+  ===================================================================
+  Di FGPiston (doFuelFlow) rasio ekivalensi dihitung begini:
+
+      equivalence_ratio = 1.3 x mixture_pos x (101325 / p_amb)
+
+  Perhatikan 101325/p_amb: makin tinggi terbang, makin KAYA campuran,
+  karena JSBSim menganggap karburatornya tidak terkompensasi. Dengan
+  mixture dipaku 1.0 seperti versi sebelumnya:
+
+      permukaan laut  -> phi = 1.30  -> F/A = 0.088  -> ME = 1.00
+      657 m (Batujajar)  -> phi = 1.41  -> F/A = 0.096  -> ME = 0.97
+      3000 m             -> phi = 1.88  -> F/A = 0.128  -> ME = 0.00  (!)
+
+  ME diambil dari tabel Mixture_Efficiency_Correlation bawaan JSBSim,
+  yang berakhir di F/A = 0.125 dengan nilai NOL. Jadi di sekitar
+  2700 m ke atas mesin kehilangan seluruh dayanya - dan konsumsi
+  bahan bakar juga jadi tidak karuan jauh sebelum itu.
+
+  Engine UAV kelas ini pakai kompensasi ketinggian (EFI atau
+  karburator berkompensasi), jadi yang benar adalah menahan rasio
+  ekivalensi tetap. Caranya: mixture = p_amb / p_sea_level, sehingga
+  faktor 101325/p_amb saling meniadakan dan phi tetap 1.3 di semua
+  ketinggian.
+
+  atmosphere/P-psf dipakai karena itulah satuan tekanan ambien di
+  JSBSim; 101325 Pa = 2116.22 psf. Dibatasi 0.35..1.0 supaya tidak
+  pernah nol (di atas ~11 km) dan tidak pernah lebih kaya dari
+  setelan permukaan laut.
+  ===================================================================
+-->
+
+<system name="auto_engine">
+
+  <channel name="engine_auto_start">
+
+    <!-- Magneto BOTH -->
+    <switch name="magnetos">
+
+      <default value="0"/>
+
+      <test value="3">
+        simulation/sim-time-sec ge 0
+      </test>
+
+      <output>propulsion/magneto_cmd</output>
+
+    </switch>
+
+    <!-- Mixture: dikompensasi ketinggian, lihat catatan di atas.
+         Output langsung ke fcs/mixture-pos-norm karena FGFCS::Run()
+         menyalin mixture-cmd-norm -> mixture-pos-norm SEBELUM channel
+         <system> dijalankan, jadi menulis ke -pos-norm yang menang. -->
+    <fcs_function name="fcs/mixture-alt-comp">
+      <function>
+        <product>
+          <value> 1.0 </value>
+          <quotient>
+            <property> atmosphere/P-psf </property>
+            <value> 2116.22 </value>
+          </quotient>
+        </product>
+      </function>
+      <clipto>
+        <min> 0.35 </min>
+        <max> 1.00 </max>
+      </clipto>
+      <output> fcs/mixture-cmd-norm </output>
+      <output> fcs/mixture-pos-norm </output>
+    </fcs_function>
+
+    <!-- Starter aktif 5 detik -->
+    <switch name="starter">
+
+      <default value="0"/>
+
+      <test value="1">
+        simulation/sim-time-sec lt 5
+      </test>
+
+      <output>propulsion/starter_cmd</output>
+
+    </switch>
+
+  </channel>
+
+</system>

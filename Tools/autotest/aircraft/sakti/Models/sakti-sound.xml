@@ -1,0 +1,251 @@
+<?xml version="1.0"?>
+
+<!--
+  ===================================================================
+  SUARA MESIN SAKTI  -  FlightGear sound effects
+  ===================================================================
+
+  Dipanggil dari sakti-set.xml lewat <sim><sound><path>.
+
+  == Isi berkas ini =================================================
+
+  HANYA suara mesin. Satu loop dengung mesin plus satu bunyi start.
+  Tidak ada lapisan desis propeller dan tidak ada lapisan knalpot,
+  karena keduanya terdengar seperti suara lingkungan, bukan mesin.
+  Alasan rincinya ada di catatan di bagian bawah berkas ini, lengkap
+  dengan cara menghidupkannya lagi kalau memang diinginkan.
+
+  Kalau nanti masih terdengar bunyi lain di luar dengung mesin, bunyi
+  itu BUKAN dari berkas ini. Sumber lain yang mungkin: pesawat AI dan
+  ATC (sudah dimatikan opsi disable-ai-models di fg_sakti_view.sh),
+  dan musik pembuka FlightGear (/sim/startup/intro-music).
+
+  == Dari mana datanya ==============================================
+
+  FlightGear di sini hanya penampil (flight-model external). Dua jalur
+  data masuk ke FlightGear dan keduanya dipakai berkas ini:
+
+    1. Paket FDM native (UDP 5503) dari ArduPilot SITL
+       -> /engines/engine[0]/rpm
+       Sejak perbaikan di libraries/AP_HAL_SITL/SITL_State.cpp, nilai
+       ini adalah RPM MESIN SEBENARNYA hasil hitungan JSBSim (FGPiston),
+       bukan lagi tebakan dari lebar pulsa servo. Jadi RPM sudah ikut
+       memperhitungkan beban propeller, kerapatan udara, dan mixture.
+
+    2. Soket generic (TCP 5510, protokol ardupilot_surface) dari
+       SIM_JSBSim::send_servos()
+       -> /fcs/throttle-pos-norm  (0..1, perintah throttle ArduPilot)
+
+  Jadi suara mengikuti throttle lewat DUA jalan: langsung (properti
+  throttle mengatur volume, seperti bukaan gas yang menambah suara
+  hisapan) dan tidak langsung (throttle menaikkan RPM, RPM menaikkan
+  nada). Yang kedua yang paling terasa.
+
+  == Angka acuan, diambil dari Engines/engine.xml ====================
+
+  Mesin: 170 cc, 2 silinder, 2 tak, idle 1100 RPM.
+  Hasil bangku uji di engine.xml (statis, 1157 m MSL):
+
+      throttle 1.00  ->  10207 RPM     <- dipakai sebagai RPM_MAX
+      throttle 0.80  ->   6948 RPM     <- kondisi jelajah
+      throttle 0.70  ->   5325 RPM
+      throttle 0.60  ->   4141 RPM
+      idle           ->   1100 RPM
+
+  Mesin 2 tak menyalakan satu kali tiap putaran tiap silinder, jadi
+  frekuensi pembakaran = 2 x RPM/60:
+
+      idle    1100 RPM  ->   36.7 Hz
+      jelajah 6948 RPM  ->  231.6 Hz
+      penuh  10207 RPM  ->  340.2 Hz
+
+  Itu sebabnya nada dibuat SEBANDING dengan RPM: rasio nada idle ke
+  penuh mengikuti rasio frekuensi pembakaran yang sebenarnya.
+
+  == Cara membaca <volume> dan <pitch> ===============================
+
+  FlightGear menghitung tiap blok sebagai
+
+      hasil = clamp(properti x factor + offset, min, max)
+
+  dan MENGALIKAN semua blok <volume> yang ada di satu efek. <pitch>
+  1.0 berarti berkas wav dimainkan pada laju cuplik aslinya.
+
+  Faktor nada dan volume memakai 1/10207 = 0.000098 supaya gampang
+  dilacak: kalikan RPM dengan itu dan hasilnya 1.0 tepat di RPM
+  maksimum.
+
+      RPM      pitch      volume dari RPM
+      1100     0.41       0.31
+      4141     0.71       0.61
+      6948     0.98       0.88
+      10207    1.30       1.00
+
+  == Menyetel ulang ==================================================
+
+  Terlalu pelan       : naikkan <offset> di blok volume, atau naikkan
+                        <reference-dist> (jarak acuan peredaman; kamera
+                        kejar bawaan ada di sekitar 28 m dari pesawat).
+  Terlalu melengking  : turunkan <max> pada <pitch>, atau turunkan
+                        <factor> nada.
+  Kurang terasa gas   : perbesar <factor> pada blok volume yang memakai
+                        /fcs/throttle-pos-norm dan perkecil <offset>nya
+                        dengan jumlah yang sama.
+
+  Berkas wav diambil dari Sounds/ bawaan FlightGear (FG_ROOT), jadi
+  tidak ada berkas biner yang perlu ikut disimpan di repo ini.
+  ===================================================================
+-->
+
+<PropertyList>
+
+ <fx>
+
+  <!-- =============================================================
+       DENGUNG MESIN
+       wasp.wav adalah loop mesin piston kecil bawaan FlightGear,
+       1.68 detik, puncak spektrum 68 Hz dengan deret harmonik di
+       atasnya: karakter dengung, cocok untuk 2 tak kecil. Nada
+       mengikuti RPM, volume mengikuti RPM dan bukaan throttle.
+       ============================================================= -->
+  <engine>
+   <name>engine</name>
+   <mode>looped</mode>
+   <path>Sounds/wasp.wav</path>
+
+   <condition>
+    <greater-than>
+     <property>/engines/engine[0]/rpm</property>
+     <value>100</value>
+    </greater-than>
+   </condition>
+
+   <!-- volume dari RPM: 0.31 saat idle, 1.00 di 10207 RPM -->
+   <volume>
+    <property>/engines/engine[0]/rpm</property>
+    <factor>0.000098</factor>
+    <offset>0.20</offset>
+    <min>0.28</min>
+    <max>1.00</max>
+   </volume>
+
+   <!-- volume dari throttle: 0.45 saat gas tutup, 1.00 saat gas penuh -->
+   <volume>
+    <property>/fcs/throttle-pos-norm</property>
+    <factor>0.55</factor>
+    <offset>0.45</offset>
+    <min>0.45</min>
+    <max>1.00</max>
+   </volume>
+
+   <!-- nada sebanding RPM, 0.41 saat idle sampai 1.30 saat penuh -->
+   <pitch>
+    <property>/engines/engine[0]/rpm</property>
+    <factor>0.000098</factor>
+    <offset>0.30</offset>
+    <min>0.35</min>
+    <max>1.40</max>
+   </pitch>
+
+   <reference-dist>20.0</reference-dist>
+   <max-dist>1200.0</max-dist>
+  </engine>
+
+
+  <!-- =============================================================
+       START
+       Sekali bunyi saat RPM pertama kali naik dari nol. Skrip JSBSim
+       yang dibuat SIM_JSBSim menghidupkan mesin pada sim-time <= 0.01
+       detik, jadi ini terdengar tepat setelah FlightGear tersambung.
+       ============================================================= -->
+  <starter>
+   <name>engine-start</name>
+   <mode>once</mode>
+   <path>Sounds/engstart.wav</path>
+
+   <condition>
+    <greater-than>
+     <property>/engines/engine[0]/rpm</property>
+     <value>100</value>
+    </greater-than>
+   </condition>
+
+   <volume>
+    <offset>0.60</offset>
+   </volume>
+
+   <reference-dist>20.0</reference-dist>
+   <max-dist>800.0</max-dist>
+  </starter>
+
+ </fx>
+
+</PropertyList>
+
+<!--
+  ===================================================================
+  LAPISAN YANG DIMATIKAN, DAN KENAPA
+  ===================================================================
+
+  Versi pertama berkas ini menumpuk tiga loop sekaligus. Hasilnya
+  terdengar ada bunyi lain di luar mesin, seperti desis udara atau
+  suara jet. Sebabnya ada di karakter berkas wav-nya sendiri, diukur
+  dari isi Sounds/ bawaan FlightGear:
+
+      berkas             puncak    energi 40..800 Hz    sisanya
+      wasp.wav             68 Hz         56.9%           43.1%
+      exhaust_loop.wav    162 Hz         67.8%           32.2%
+      prop.wav             84 Hz         45.3%           54.7%
+
+  prop.wav lebih dari separuh energinya tersebar merata, bukan di
+  deret harmonik. Telinga membaca energi tersebar seperti itu sebagai
+  DESIS, bukan sebagai mesin. Diputar pada nada 0.4 sampai 1.35 dan
+  volume yang sempat mencapai 0.40 pada gas penuh, bunyinya jadi
+  seperti aliran udara atau semburan jet. Itu sumber utama keluhan.
+
+  exhaust_loop.wav puncaknya di 162 Hz. Itu laju pembakaran mesin
+  torak besar putaran rendah, bukan 2 tak 170 cc yang di jelajah saja
+  sudah 232 Hz. Diturunkan nadanya sampai 0.45 bunyinya jadi gemuruh
+  rendah yang terdengar seperti suara latar.
+
+  Kedua lapisan itu dihapus dari <fx> di atas. Kalau suatu saat ingin
+  menambah isi lagi, salin blok di bawah ini ke dalam <fx> dan setel
+  volumenya jauh lebih rendah daripada versi pertama. Saran: coba
+  knalpot lebih dulu karena masih masuk akal untuk mesin torak, dan
+  jangan pakai prop.wav sama sekali kecuali memang ingin efek desis.
+
+  <exhaust>
+   <name>exhaust</name>
+   <mode>looped</mode>
+   <path>Sounds/exhaust_loop.wav</path>
+   <condition>
+    <greater-than>
+     <property>/engines/engine[0]/rpm</property>
+     <value>100</value>
+    </greater-than>
+   </condition>
+   <volume>
+    <property>/fcs/throttle-pos-norm</property>
+    <factor>0.20</factor>
+    <offset>0.05</offset>
+    <min>0.05</min>
+    <max>0.25</max>
+   </volume>
+   <pitch>
+    <property>/engines/engine[0]/rpm</property>
+    <factor>0.0000980</factor>
+    <offset>0.55</offset>
+    <min>0.55</min>
+    <max>1.50</max>
+   </pitch>
+   <reference-dist>20.0</reference-dist>
+   <max-dist>1200.0</max-dist>
+  </exhaust>
+
+  Catatan untuk blok di atas: faktor nadanya sengaja disamakan dengan
+  lapisan mesin (0.000098) supaya knalpot ikut naik serentak dengan
+  dengung mesin. Pada versi pertama faktornya lebih kecil, sehingga
+  kedua lapisan melar berbeda arah dan terdengar seperti dua sumber
+  bunyi yang tidak berhubungan.
+  ===================================================================
+-->

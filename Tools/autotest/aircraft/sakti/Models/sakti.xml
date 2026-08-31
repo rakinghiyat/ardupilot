@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+
+<PropertyList>
+
+    <!-- MAIN MODEL -->
+    <path>sakti.ac</path>
+
+    <!-- ================================================================= -->
+    <!-- MODEL OFFSETS - penyelarasan mesh .ac terhadap titik FDM           -->
+    <!--                                                                    -->
+    <!-- Ini SATU-SATUNYA tempat FlightGear membaca <offsets> (sibling dari -->
+    <!-- <path>). Bukan di sakti-set.xml, dan bukan VRP/AERORP/EYEPOINT   -->
+    <!-- di sakti.xml (itu properti JSBSim, FG tidak membacanya).         -->
+    <!--                                                                    -->
+    <!-- MASALAHNYA: origin mesh sakti.ac ada di HIDUNG (X=0..2.1,       -->
+    <!-- hidung=0, ekor=2.1). FG memutar model di titik origin. Saat pesawat -->
+    <!-- pitch +30 deg nose-up di cradle, ekor terayun turun 2.1*sin30 =    -->
+    <!-- 1.05 m, sementara origin cuma ~0.32 m di atas tanah => ekor        -->
+    <!-- terbenam, hanya hidung nongol.                                     -->
+    <!-- Bandingkan c172p: origin .ac-nya di tengah badan (X=-2.14..6.09),  -->
+    <!-- makanya tidak butuh x-offset.                                      -->
+    <!--                                                                    -->
+    <!-- Sumbu .ac (sama utk sakti & c172p): X=memanjang(+ke ekor),         -->
+    <!-- Y=ke atas, Z=bentang sayap.                                        -->
+    <!--                                                                    -->
+    <!-- TITIK AWAL TUNING: geser mesh ke depan sejauh CG (x=1.13567 di     -->
+    <!-- sakti.xml) supaya CG jatuh di origin/pusat rotasi, seperti c172p.-->
+    <!-- Kalau arah x-m ternyata terbalik, coba +1.136. Setelah x pas, baru -->
+    <!-- setel y-m (naik/turun) supaya roda menyentuh landasan.             -->
+    <!-- ================================================================= -->
+    <offsets>
+        <!-- <x-m>-1.136</x-m> -->
+        <x-m>-1.8</x-m>
+        <y-m>0.0</y-m>
+        <z-m>0.0</z-m>
+        <pitch-deg>0.0</pitch-deg>
+        <roll-deg>0.0</roll-deg>
+        <heading-deg>0.0</heading-deg>
+    </offsets>
+
+    <!-- <animation>
+        <type>rotate</type>
+
+        <object-name>sakti</object-name>
+
+        <property>/sim/time/elapsed-sec</property>
+
+        <factor>0</factor>
+
+        <offset-deg>180</offset-deg>
+
+        <axis>
+        <x>0</x>
+        <y>0</y>
+        <z>1</z>
+        </axis>
+
+        <center>
+        <x-m>0</x-m>
+        <y-m>0</y-m>
+        <z-m>0</z-m>
+        </center>
+    </animation> -->
+
+
+    <!-- ================================================= -->
+    <!-- LEFT INBOARD ELEVON -->
+    <!-- ================================================= -->
+
+    <animation>
+        <type>rotate</type>
+
+        <object-name>left_inboard</object-name>
+        
+        <property>fcs/left-inboard-pos-deg</property>
+
+        <factor>-1</factor>
+
+        <axis>
+            <x1-m>1.76477</x1-m>
+            <y1-m>-0.422358</y1-m>
+            <z1-m>-0.034683</z1-m>
+            <x2-m>1.77835</x2-m>
+            <y2-m>-0.26412</y2-m>
+            <z2-m>-0.054077</z2-m>
+        </axis>
+
+    </animation>
+
+
+    <!-- ================================================= -->
+    <!-- LEFT OUTBOARD ELEVON -->
+    <!-- ================================================= -->
+
+    <animation>
+        <type>rotate</type>
+
+        <object-name>left_outboard</object-name>
+
+        <property>fcs/left-outboard-pos-deg</property>
+
+        <factor>-1</factor>
+
+        <axis>
+            <x1-m>1.73414</x1-m>
+            <y1-m>-0.781811</y1-m>
+            <z1-m>0.00707</z1-m>
+            <x2-m>1.74423</x2-m>
+            <y2-m>-0.663001</y2-m>
+            <z2-m>-0.00643</z2-m>
+        </axis>
+
+    </animation>
+
+
+    <!-- ================================================= -->
+    <!-- RIGHT INBOARD ELEVON -->
+    <!-- ================================================= -->
+
+    <animation>
+        <type>rotate</type>
+
+        <object-name>right_inboard</object-name>
+
+        <property>fcs/right-inboard-pos-deg</property>
+
+        <factor>-1</factor>
+
+        <axis>
+            <x1-m>1.77835</x1-m>
+            <y1-m>0.264104</y1-m>
+            <z1-m>-0.054719</z1-m>
+            <x2-m>1.76476</x2-m>
+            <y2-m>0.422372</y2-m>
+            <z2-m>-0.035574</z2-m>
+        </axis>
+
+    </animation>
+
+
+    <!-- ================================================= -->
+    <!-- RIGHT OUTBOARD ELEVON -->
+    <!-- ================================================= -->
+
+    <animation>
+        <type>rotate</type>
+
+        <object-name>right_outboard</object-name>
+
+        <property>fcs/right-outboard-pos-deg</property>
+
+        <factor>-1</factor>
+
+        <axis>
+            <x1-m>1.7475</x1-m>
+            <y1-m>0.623469</y1-m>
+            <z1-m>-0.011248</z1-m>
+            <x2-m>1.73392</x2-m>
+            <y2-m>0.781738</y2-m>
+            <z2-m>0.007897</z2-m>
+        </axis>
+
+    </animation>
+
+    <!-- ================================================= -->
+    <!-- PROPELLER -->
+    <!-- ================================================= -->
+
+    <animation>
+        <type>spin</type>
+
+        <object-name>propeller</object-name>
+
+        <property>/engines/engine/rpm</property>
+
+        <factor>0.1</factor>
+
+        <center>
+            <x-m>2.04711</x-m>
+            <y-m>-0.001243</y-m>
+            <z-m>0.012002</z-m>
+        </center>
+
+        <axis>
+            <x>1</x>
+            <y>0</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+</PropertyList>

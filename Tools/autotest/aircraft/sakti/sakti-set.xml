@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+
+<!--
+  Berkas pesawat FlightGear untuk sakti.
+
+  Namanya HARUS memakai tanda hubung, "sakti-set.xml": itulah yang dicari
+  FlightGear saat dijalankan dengan opsi baris perintah aircraft=sakti.
+  Tanpa tanda hubung berkas ini tidak akan pernah terbaca.
+
+  FlightGear di sini hanya penampil (<flight-model>external</flight-model>);
+  seluruh fisika dihitung JSBSim lewat ArduPilot SITL.
+
+  Jalankan lewat Tools/autotest/fg_sakti_view.sh, dan pastikan
+  FlightGear/ardupilot_surface.xml sudah disalin ke direktori Protocol/
+  FlightGear - tanpa itu animasi permukaan kendali tidak bekerja.
+-->
+
+<PropertyList>
+
+  <sim>
+
+    <!-- Basic aircraft info -->
+    <description>Sakti170</description>
+    <author>Tactical UAV Teams</author>
+    <aircraft-version>1.0</aircraft-version>
+
+    <!-- External flight dynamics -->
+    <flight-model>external</flight-model>
+
+    <!-- Main visual model -->
+    <model>
+      <path>Aircraft/sakti/Models/sakti.xml</path>
+    </model>
+
+    <!-- Efek suara mesin. Lihat sakti-sound.xml untuk penjelasan
+         pemetaan RPM dan throttle ke nada dan volume. -->
+    <sound>
+      <path>Aircraft/sakti/Models/sakti-sound.xml</path>
+    </sound>
+
+    <!-- Startup camera -->
+    <view>
+      <internal type="bool">false</internal>
+
+      <config>
+        <!-- Posisi kamera -->
+        <x-offset-m type="double">20.0</x-offset-m>
+        <y-offset-m type="double">0.0</y-offset-m>
+        <z-offset-m type="double">20.0</z-offset-m>
+
+        <!-- Arah pandang -->
+        <pitch-offset-deg type="double">20.0</pitch-offset-deg>
+
+        <!-- Zoom -->
+        <default-field-of-view-deg type="double">0.0</default-field-of-view-deg>
+      </config>
+    </view>
+
+    <!-- Disable 2D panel -->
+    <panel>
+      <visibility type="bool">false</visibility>
+    </panel>
+
+  </sim>
+
+  <nasal>
+    <sakti>
+        <script>
+          setlistener("/sim/signals/fdm-initialized", func {
+
+            var left = screen.display.new(20, 10).setcolor(0, 0, 0);
+
+            left.add("/fcs/left-inboard-pos-deg");
+            left.add("/fcs/right-inboard-pos-deg");
+            left.add("/fcs/left-outboard-pos-deg");
+            left.add("/fcs/right-outboard-pos-deg");
+
+            var right = screen.display.new(-250, 20).setcolor(0, 0, 0);
+
+            right.add("/orientation/pitch-deg");
+            right.add("/orientation/roll-deg");
+            right.add("/orientation/heading-deg");
+
+            # pemantau suara: RPM mesin dan throttle, dua properti yang
+            # menggerakkan nada dan volume di sakti-sound.xml
+            var engine = screen.display.new(20, 120).setcolor(0, 0, 0);
+
+            engine.add("/engines/engine[0]/rpm");
+            engine.add("/fcs/throttle-pos-norm");
+
+          });
+
+          setlistener("/sim/signals/fdm-initialized", func {
+
+            setprop("/sim/current-view/view-number", 1);
+            setprop("/sim/current-view/field-of-view", 6);
+
+          });
+        </script>
+      </sakti>
+    </nasal>
+
+</PropertyList>

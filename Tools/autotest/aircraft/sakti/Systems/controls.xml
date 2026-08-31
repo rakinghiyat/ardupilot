@@ -1,0 +1,297 @@
+<?xml version="1.0"?>
+<system name="delta_4surface_controls">
+
+  <!-- ===================================================== -->
+  <!-- DECLARE PROPERTIES -->
+  <!-- ===================================================== -->
+  <property value="0"> fcs/left-outboard-cmd-norm  </property>
+  <property value="0"> fcs/right-outboard-cmd-norm </property>
+  <property value="0"> fcs/left-inboard-cmd-norm   </property>
+  <property value="0"> fcs/right-inboard-cmd-norm  </property>
+  <property value="0"> fcs/antitorque-lo           </property>
+  <property value="0"> fcs/antitorque-ro           </property>
+
+  <!-- ===================================================== -->
+  <!-- TRIM ANTI-TORSI BALING-BALING                          -->
+  <!--                                                        -->
+  <!-- Baling-baging berputar satu arah, badan pesawat        -->
+  <!-- terdorong berputar ke arah sebaliknya (aksi-reaksi).   -->
+  <!-- Di JSBSim: vTorque(eX) = -sense x daya / putaran       -->
+  <!-- (FGPropeller.cpp). Dengan <sense>1</sense> torsinya    -->
+  <!-- negatif -> pesawat ROLL KE KIRI.                       -->
+  <!-- Terbukti: membalik <sense> ke -1 membalik arah roll.   -->
+  <!--                                                        -->
+  <!-- Paling parah saat launch: throttle 100% (run-up) tapi  -->
+  <!-- kecepatan baru ~31 m/s, jadi daya aileron masih lemah. -->
+  <!-- Terukur di log: roll -24.5 deg dengan aileron mentok.  -->
+  <!--                                                        -->
+  <!-- PERHITUNGAN BESAR TRIM:                                -->
+  <!--   torsi prop = daya/putaran = 13497 W / 1042 rad/s     -->
+  <!--              = 12.9 N.m = 9.51 lb.ft                   -->
+  <!--   momen roll elevon (dari aero/moment/Roll_outboard_   -->
+  <!--   elevon di sakti.xml):                              -->
+  <!--     L = qbar x Sw x bw x (LO_rad - RO_rad) x Cl        -->
+  <!--   saat launch: qbar=14.75 psf, Sw=20.67 sqft,          -->
+  <!--                bw=6.03 ft, Cl=0.0733                   -->
+  <!--   => butuh beda 0.0706 rad = 4.05 deg (total)          -->
+  <!--   => 2.02 deg per sisi = 0.1124 dlm satuan norm        -->
+  <!--      (rentang outboard +-18 deg)                       -->
+  <!--                                                        -->
+  <!-- ARAH: komentar di sakti.xml "LO>RO -> roll kiri",    -->
+  <!-- jadi untuk melawan roll kiri perlu LO<RO:              -->
+  <!--   LO diberi trim NEGATIF, RO diberi trim POSITIF.      -->
+  <!--                                                        -->
+  <!-- SUMBER SINYAL: propulsion/engine/propeller-torque-ftlb -->
+  <!-- yaitu torsi baling-baling SEBENARNYA dari JSBSim.      -->
+  <!-- Trim otomatis ikut naik-turun bersama daya mesin, jadi -->
+  <!-- saat idle/glide trim hilang sendiri.                   -->
+  <!--                                                        -->
+  <!-- JANGAN pakai fcs/throttle-pos-norm sebagai input:      -->
+  <!-- controls.xml dieksekusi SEBELUM channel Throttle (yang -->
+  <!-- ada di <flight_control> sakti.xml), sehingga nilainya -->
+  <!-- masih 0 saat dibaca -> trim tidak pernah aktif.        -->
+  <!--                                                        -->
+  <!-- GAIN K=0.33 : DIKALIBRASI DARI LOG TERBANG SUNGGUHAN     -->
+  <!-- (autopilot aktif, bukan standalone):                       -->
+  <!-- K=0.20 : dipilih dari perbandingan log terbang, tuning roll  -->
+  <!-- 90/T0.4 yang sama:                                           -->
+  <!--   K       puncakKiri overshoot settle   RMS    bias          -->
+  <!--   0.20     -18.2      +23.4    6.00s   10.86  +0.61  <- pakai-->
+  <!--   0.33     -16.9      +25.9      -     11.40  +1.60          -->
+  <!--   0.45     -17.4      +27.3    7.97s     -      -            -->
+  <!-- K besar memang memangkas roll di titik release (-12.6 deg     -->
+  <!-- tanpa trim -> -2.6 deg pada K=0.45), TAPI overshoot & settle  -->
+  <!-- justru memburuk. Dinamika sesudah release lebih menentukan    -->
+  <!-- daripada roll di titik release.                               -->
+  <!--                                                               -->
+  <!-- CATATAN KETERBATASAN: selama stroke qbar sangat rendah,        -->
+  <!-- sehingga K x torsi / qbar selalu menabrak <clipto> +-0.5.      -->
+  <!-- Akibatnya nilai K TIDAK berpengaruh selama stroke - elevon     -->
+  <!-- kiri mentok -18 deg apa pun K-nya. K baru terasa setelah qbar  -->
+  <!-- naik. Kalau ingin K berpengaruh sejak di rail, naikkan batas   -->
+  <!-- bawah qbar (nilai 3.0 di bawah) supaya tidak saturasi.         -->
+  <!--                                                               -->
+  <!-- Trim TIDAK menyebabkan yaw saat launch. Yaw berasal dari efek  -->
+  <!-- GIROSKOPIK baling-baling saat pesawat menunduk cepat setelah   -->
+  <!-- lepas rail (JSBSim: vMn = PQR x H, FGPropeller.cpp).           -->
+  <!-- Korelasi laju pitch vs sideslip = +0.909. Hitungan: momen giro -->
+  <!-- 12.7 lb.ft / stabilitas arah 97.4 lb.ft/rad = 7.5 deg.         -->
+  <!-- Dikurangi lewat PTCH2SRV_RMAX_DN (batasi laju menunduk),       -->
+  <!-- bukan lewat trim.                                             -->
+  <!-- CARA MENYETEL: ubah nilai K di kedua <value> di bawah    -->
+  <!-- (AT LO positif, AT RO negatif, besarnya sama).            -->
+  <!--   K terlalu KECIL -> masih roll ke KIRI                   -->
+  <!--   K terlalu BESAR -> jadi roll ke KANAN                   -->
+  <!-- ===================================================== -->
+<channel name="Anti-Torque Trim">
+    <!-- Defleksi = K x torsi / qbar.
+         Dibagi qbar supaya MOMEN yang dihasilkan tetap sama di semua
+         kecepatan: saat launch (qbar kecil) defleksi otomatis besar,
+         saat jelajah (qbar besar) defleksi mengecil sendiri.
+         Kalau memakai gain tetap, trim yang pas untuk launch akan
+         over-trim saat jelajah.
+         qbar dibatasi minimal 3 psf agar tidak meledak saat diam. -->
+    <fcs_function name="AT LO">
+      <function>
+        <quotient>
+          <product>
+            <value>0.20</value>
+            <property>propulsion/engine/propeller-torque-ftlb</property>
+          </product>
+          <max>
+            <property>aero/qbar-psf</property>
+            <value>3.0</value>
+          </max>
+        </quotient>
+      </function>
+      <clipto> <min>-0.5</min> <max>0.5</max> </clipto>
+      <output>fcs/antitorque-lo</output>
+    </fcs_function>
+
+    <fcs_function name="AT RO">
+      <function>
+        <quotient>
+          <product>
+            <value>-0.20</value>
+            <property>propulsion/engine/propeller-torque-ftlb</property>
+          </product>
+          <max>
+            <property>aero/qbar-psf</property>
+            <value>3.0</value>
+          </max>
+        </quotient>
+      </function>
+      <clipto> <min>-0.5</min> <max>0.5</max> </clipto>
+      <output>fcs/antitorque-ro</output>
+    </fcs_function>
+</channel>
+
+<channel name="Left Outboard">
+    <!-- LO dari aileron slot (SERVO1, Lua output) + trim anti-torsi -->
+    <summer name="LO Map">
+      <input>fcs/aileron-cmd-norm</input>
+      <input>fcs/antitorque-lo</input>
+      <!-- WAJIB: tanpa clipto, aileron(+-1) + trim bisa jadi +-1.5 dan
+           aerosurface_scale mengekstrapolasi jadi +-27 deg padahal
+           batas fisik outboard hanya +-18 deg -> pesawat terbalik. -->
+      <clipto> <min>-1.0</min> <max>1.0</max> </clipto>
+      <output>fcs/left-outboard-cmd-norm</output>
+    </summer>
+
+  <aerosurface_scale name="Left Outboard Control">
+    <input>fcs/left-outboard-cmd-norm</input>
+    <range>
+      <min>-0.314159</min>
+      <max> 0.314159</max>
+    </range>
+    <output>fcs/left-outboard-pos-rad</output>
+  </aerosurface_scale>
+
+  <aerosurface_scale name="Left Outboard Normalization">
+    <input>fcs/left-outboard-pos-rad</input>
+    <domain>
+      <min>-0.314159</min>
+      <max> 0.314159</max>
+    </domain>
+    <range>
+      <min>-1</min>
+      <max> 1</max>
+    </range>
+    <output>fcs/left-outboard-pos-norm</output>
+  </aerosurface_scale>
+</channel>
+
+<channel name="Right Outboard">
+    <!-- RO dari rudder slot (SERVO2, Lua output) + trim anti-torsi -->
+    <summer name="RO Map">
+      <input>fcs/rudder-cmd-norm</input>
+      <input>fcs/antitorque-ro</input>
+      <clipto> <min>-1.0</min> <max>1.0</max> </clipto>
+      <output>fcs/right-outboard-cmd-norm</output>
+    </summer>
+
+  <aerosurface_scale name="Right Outboard Control">
+    <input>fcs/right-outboard-cmd-norm</input>
+    <range>
+      <min>-0.314159</min>
+      <max> 0.314159</max>
+    </range>
+    <output>fcs/right-outboard-pos-rad</output>
+  </aerosurface_scale>
+
+  <aerosurface_scale name="Right Outboard Normalization">
+    <input>fcs/right-outboard-pos-rad</input>
+    <domain>
+      <min>-0.314159</min>
+      <max> 0.314159</max>
+    </domain>
+    <range>
+      <min>-1</min>
+      <max> 1</max>
+    </range>
+    <output>fcs/right-outboard-pos-norm</output>
+  </aerosurface_scale>
+</channel>
+
+<channel name="Left Inboard">
+    <!-- LI dan RI dari elevator slot (SERVO3/4) -->
+    <pure_gain name="LI Map">
+      <input>fcs/elevator-cmd-norm</input>
+      <gain>1.0</gain>
+      <output>fcs/left-inboard-cmd-norm</output>
+    </pure_gain>
+
+  <aerosurface_scale name="Left Inboard Control">
+    <input>fcs/left-inboard-cmd-norm</input>
+    <range>
+      <min>-0.20944</min>
+      <max> 0.20944</max>
+    </range>
+    <output>fcs/left-inboard-pos-rad</output>
+  </aerosurface_scale>
+
+  <aerosurface_scale name="Left Inboard Normalization">
+    <input>fcs/left-inboard-pos-rad</input>
+    <domain>
+      <min>-0.20944</min>
+      <max> 0.20944</max>
+    </domain>
+    <range>
+      <min>-1</min>
+      <max> 1</max>
+    </range>
+    <output>fcs/left-inboard-pos-norm</output>
+  </aerosurface_scale>
+</channel>
+
+<channel name="Right Inboard">
+    <pure_gain name="RI Map">
+      <input>fcs/elevator-cmd-norm</input>
+      <gain>1.0</gain>
+      <output>fcs/right-inboard-cmd-norm</output>
+    </pure_gain>
+
+  <aerosurface_scale name="Right Inboard Control">
+    <input>fcs/right-inboard-cmd-norm</input>
+    <range>
+      <min>-0.20944</min>
+      <max> 0.20944</max>
+    </range>
+    <output>fcs/right-inboard-pos-rad</output>
+  </aerosurface_scale>
+
+  <aerosurface_scale name="Right Inboard Normalization">
+    <input>fcs/right-inboard-pos-rad</input>
+    <domain>
+      <min>-0.20944</min>
+      <max> 0.20944</max>
+    </domain>
+    <range>
+      <min>-1</min>
+      <max> 1</max>
+    </range>
+    <output>fcs/right-inboard-pos-norm</output>
+  </aerosurface_scale>
+</channel>
+
+<channel name="Debug Logging">
+
+    <pure_gain name="LO DEG DEBUG">
+      <input>fcs/left-outboard-pos-rad</input>
+      <gain>57.295780</gain>
+      <output>fcs/left-outboard-pos-deg</output>
+    </pure_gain>
+
+    <pure_gain name="RO DEG DEBUG">
+      <input>fcs/right-outboard-pos-rad</input>
+      <gain>57.295780</gain>
+      <output>fcs/right-outboard-pos-deg</output>
+    </pure_gain>
+
+    <pure_gain name="LI DEG DEBUG">
+      <input>fcs/left-inboard-pos-rad</input>
+      <gain>57.295780</gain>
+      <output>fcs/left-inboard-pos-deg</output>
+    </pure_gain>
+
+    <pure_gain name="RI DEG DEBUG">
+      <input>fcs/right-inboard-pos-rad</input>
+      <gain>57.295780</gain>
+      <output>fcs/right-inboard-pos-deg</output>
+    </pure_gain>
+
+    <pure_gain name="PITCH DEG DEBUG">
+      <input>attitude/pitch-rad</input>
+      <gain>57.295780</gain>
+      <output>attitude/pitch-deg</output>
+    </pure_gain>
+
+    <pure_gain name="ROLL DEG DEBUG">
+      <input>attitude/roll-rad</input>
+      <gain>57.295780</gain>
+      <output>attitude/roll-deg</output>
+    </pure_gain>
+
+  </channel>
+
+</system>

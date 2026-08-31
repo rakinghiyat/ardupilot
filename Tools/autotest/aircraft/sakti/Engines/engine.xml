@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+
+<!--
+  File:     SAKTI170_TD1KTOW55Kg_engine.xml
+  Author:   AeromatiC++ v 3.3.21
+
+  See: http://wiki.flightgear.org/JSBSim_Engines#FGPiston
+
+  Inputs:
+    name:           SAKTI170_TD1KTOW55Kg_engine
+    type:           Piston Engine (2-tak, 170 cc)
+    power:          18 hp
+
+  ===================================================================
+  KALIBRASI KONSUMSI BAHAN BAKAR  -  BACA SEBELUM MENGUBAH
+  ===================================================================
+  Di JSBSim (FGPiston) laju bahan bakar TIDAK diambil dari sebuah
+  angka konsumsi. Urutannya justru terbalik:
+
+      m_dot_air  = (displacement x RPM/60 / 2) x VE x rho_manifold
+      m_dot_fuel = m_dot_air x equivalence_ratio / 14.7
+      IHP        = (fuel_flow_pph / ISFC) x mixture_efficiency
+
+  Jadi bahan bakar keluar dari ALIRAN UDARA, lalu DAYA keluar dari
+  bahan bakar. Konsekuensinya ada dua knob:
+
+    <volumetric-efficiency>  menskala aliran udara -> menskala laju
+                             bahan bakar di SEMUA titik operasi.
+    <bsfc>                   ISFC: daya per satuan bahan bakar.
+
+  Menaikkan keduanya dengan FAKTOR YANG SAMA membuat konsumsi naik
+  dengan faktor itu sementara kurva daya TIDAK berubah sama sekali.
+  Itulah cara kalibrasi di bawah dilakukan, supaya performa terbang
+  dan logika run-up launcher (butuh RPM >= 9500) tidak ikut bergeser.
+
+  == Kenapa VE > 1 =================================================
+  JSBSim meng-HARD-CODE pembagi 2 pada swept volume (FGPiston.cpp
+  doAirFlow(): "swept_volume = (displacement_SI * (RPM/60)) / 2"),
+  yaitu asumsi 4-tak: satu isapan tiap 2 putaran. Engine ini 2-tak,
+  mengisap tiap putaran, jadi butuh 2x muatan udara. <cycles> TIDAK
+  bisa dipakai untuk itu - di JSBSim <cycles> hanya masuk ke rumus
+  auto-ISFC dan ke pumping_hp, bukan ke aliran udara.
+
+  Menggandakan <displacement> juga BUKAN pilihan yang aman: nilai itu
+  ikut masuk ke pumping_hp = (PMEP+FMEP) x displacement x RPM /
+  (Cycles x 22371), sehingga rugi pemompaan ikut berlipat dan kurva
+  daya yang sudah tervalidasi jadi rusak. Karena itu faktor 2-tak
+  dititipkan seluruhnya ke VE:
+
+      VE = 2 x (charging efficiency 2-tak) x (faktor kalibrasi)
+
+  Nilai efektif charging efficiency di bawah adalah 1.4201/2 = 0.710 -
+  wajar untuk 2-tak (delivery ratio x trapping efficiency, biasanya
+  0.6-0.8 karena sebagian campuran lolos ke exhaust saat scavenging).
+
+  == Target ========================================================
+  Target operasional: 3.0 kg/jam pada kondisi jelajah.
+  Kapasitas tangki 10 kg (lihat <tank> di sakti.xml) -> endurance
+  sekitar 3.3 jam.
+
+  Hasil terukur di bangku uji (fuel_check.xml, 1157 m MSL), angka
+  dalam kurung adalah rasio terhadap kurva daya SEBELUM perubahan:
+
+      throttle 1.00  RPM 10207 (1.020x)  13.45 hp (1.061x)  6.66 kg/jam
+      throttle 0.80  RPM  6948 (0.999x)   4.24 hp (0.998x)  2.99 kg/jam
+      throttle 0.70  RPM  5325 (0.984x)   1.91 hp (0.955x)  1.80 kg/jam
+      throttle 0.60  RPM  4141 (0.969x)   0.90 hp (0.907x)  1.16 kg/jam
+
+  RPM statis penuh tetap di atas 9500, jadi gate run-up launcher di
+  Systems/launcher.xml tetap aman.
+
+  Kalau target konsumsi berubah, UBAH DUA BARIS SAJA dan skala
+  keduanya dengan faktor yang sama:
+      <volumetric-efficiency>  dan  <bsfc>
+  Rumus: faktor = konsumsi_baru / konsumsi_lama. Menskala keduanya
+  bersamaan menjaga daya tetap; menskala salah satu saja akan
+  menggeser performa terbang.
+  Verifikasi: berkas fuel_check.xml di folder kerja lokal
+  ===================================================================
+-->
+
+<piston_engine name="engine">
+  <minmp unit="INHG">        10.0  </minmp>
+  <maxmp unit="INHG">        28.5  </maxmp>
+  <displacement unit="IN3">  10.374  </displacement>  <!-- 170 cc; JANGAN digandakan, lihat catatan di atas -->
+  <maxhp>                    14.44  </maxhp>    <!-- update 210726 -->
+  <cycles>                    2.0  </cycles>   <!-- dibiarkan 2: hanya dipakai auto-ISFC & pumping_hp -->
+  <idlerpm>                 1100.0  </idlerpm>   <!-- update 210726 -->
+  <maxrpm>                 7500.0  </maxrpm>
+  <sparkfaildrop>             0.1  </sparkfaildrop>
+
+  <!-- ===== KNOB KALIBRASI BAHAN BAKAR (skala bersamaan) ===== -->
+  <volumetric-efficiency>    1.4201 </volumetric-efficiency>  <!-- = 2 x 0.710 (charging eff. 2-tak), dikalibrasi ke 3 kg/jam -->
+  <bsfc unit="LBS/HP*HR">    0.4484 </bsfc>                   <!-- ISFC; menahan kurva daya tetap sama saat VE dinaikkan -->
+  <!-- ======================================================== -->
+
+  <man-press-lag>             0.05 </man-press-lag>
+  <static-friction unit="HP"> 0.20 </static-friction>
+  <starter-torque>           35.0  </starter-torque>
+  <starter-rpm>            1800.0  </starter-rpm>
+  <stroke unit="IN">          2.75 </stroke>
+  <bore unit="IN">            2.50 </bore>
+  <cylinders>                 2    </cylinders>
+  <compression-ratio>         9.5  </compression-ratio>   <!-- update 210726 -->
+</piston_engine>
+

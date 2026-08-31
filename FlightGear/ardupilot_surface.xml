@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+
+<PropertyList>
+
+ <generic>
+
+  <input>
+
+   <line_separator>newline</line_separator>
+   <var_separator>space</var_separator>
+
+   <chunk>
+    <name>left-outboard-deg</name>
+    <type>float</type>
+    <format>%f</format>
+    <node>fcs/left-outboard-pos-deg</node>
+   </chunk>
+
+   <chunk>
+    <name>right-outboard-deg</name>
+    <type>float</type>
+    <format>%f</format>
+    <node>fcs/right-outboard-pos-deg</node>
+   </chunk>
+
+   <chunk>
+    <name>left-inboard-deg</name>
+    <type>float</type>
+    <format>%f</format>
+    <node>fcs/left-inboard-pos-deg</node>
+   </chunk>
+
+   <chunk>
+    <name>right-inboard-deg</name>
+    <type>float</type>
+    <format>%f</format>
+    <node>fcs/right-inboard-pos-deg</node>
+   </chunk>
+
+   <chunk>
+    <name>throttle-norm</name>
+    <type>float</type>
+    <format>%f</format>
+    <node>fcs/throttle-pos-norm</node>
+   </chunk>
+   
+  </input>
+
+ </generic>
+
+</PropertyList>
