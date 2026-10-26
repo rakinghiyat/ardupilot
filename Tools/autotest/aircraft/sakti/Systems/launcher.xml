@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
 <!--
   ===================================================================
-  LAUNCHER STATE MACHINE - versi MURNI XML (tanpa modifikasi C++)
+  LAUNCHER STATE MACHINE
   ===================================================================
+  Logika latch seluruhnya XML. SATU-SATUNYA sentuhan C++ adalah
+  SIM_JSBSim.cpp mengirim fcs/launch-trigger dari SERVO7 sebagai
+  tombol LAUNCH manual (lihat TRIGGER ARM di bawah).
 
   KENAPA <system>, BUKAN <event>?
   JSBSim hanya mem-parse <event> di dalam run-script (FGScript.cpp,
@@ -15,7 +18,7 @@
   ===================================================================
   URUTAN LAUNCH (meniru prosedur catapult UAV sungguhan)
   ===================================================================
-    1. ARM di AUTO  -> fcs/launch-cmd  = 1  (latch)
+    1. TOMBOL LAUNCH -> fcs/launch-cmd  = 1 saat operator menekan (latch)
     2. ENGINE RUN-UP -> throttle dipaksa penuh selagi di rail
                         (lihat channel Throttle di sakti.xml)
     3. MESIN SIAP    -> fcs/launch-armed = 1 saat RPM >= 9500,
@@ -46,11 +49,62 @@
   dimodelkan di sisi JSBSim (realistis: di lapangan run-up memang
   dilakukan kru/ECU launcher, bukan logika takeoff autopilot).
 
-  TRIGGER ARM: fcs/elevator-cmd-norm <= -0.9
-  Dikirim ArduPilot lewat stock send_servos (tanpa patch C++).
-  Terukur: disarmed -> 0.000 ; armed AUTO takeoff -> -1.000 (stabil).
-  Bukan throttle, karena ArduPlane menahan throttle (throttle
-  suppression) sampai pesawat bergerak -> deadlock.
+  TRIGGER ARM: fcs/launch-trigger >= 0.8  (TOMBOL MANUAL)
+
+  Katapel TIDAK lagi menembak otomatis. Urutannya kini meniru kru
+  launcher sungguhan: misi mulai -> ArduPilot throttle up -> mesin
+  run-up di rel -> katapel MENUNGGU -> operator menekan tombol.
+
+  CARA MENEMBAK dari MAVProxy:
+      rc 7 2000       (tembak)
+      rc 7 1500       (kembalikan kanal ke netral, opsional)
+
+  CATATAN: jangan pakai "alias add LAUNCH ..." - MAVProxy 1.8.74 di
+  mesin ini tidak punya modul alias, perintahnya ditolak dengan
+  "Unknown command". Sempat dicoba modul kustom mavproxy_launch.py
+  supaya kata LAUNCH dikenal; modulnya lolos semua uji impor dan
+  registrasi, tapi di MAVProxy yang berjalan tetap tidak terdaftar,
+  jadi dibatalkan dan dihapus. "rc 7 2000" melakukan hal yang persis
+  sama - itu memang perintah yang dibungkus modul tadi.
+
+  JALUR SINYAL:
+      LAUNCH -> rc 7 -> SERVO7 (SERVO7_FUNCTION=1, RC passthrough)
+      ->  SIM_JSBSim.cpp send_servos() indeks 6
+      ->  "set fcs/launch-trigger"  ->  switch di bawah
+  fcs/launch-trigger DIDEKLARASIKAN di sakti.xml. Jangan dihapus:
+  JSBSim membekukan SITL kalau menerima "set" properti tak dikenal.
+  Ambang 0.8 dipilih karena kanal RC yang tidak disentuh bernilai
+  tengah (PWM 1500 -> 0.5), jadi tidak akan memicu tanpa sengaja.
+  PWM 2000 -> 1.0 melewati ambang.
+
+  RIWAYAT PEMICU SEBELUMNYA:
+
+  (b) propulsion/engine[0]/engine-rpm >= 3000 - otomatis, bekerja, tapi
+      katapel menembak sendiri begitu mesin di-spool. Diganti karena
+      operator ingin kendali manual.
+
+  (a) KENAPA BUKAN ELEVATOR LAGI (diganti 2026-10-26):
+  Pemicu lama fcs/elevator-cmd-norm <= -0.9 ternyata TERIKAT pada sudut
+  cradle. Ambang -0.9 dipilih saat pesawat duduk curam ~30 deg, di mana
+  ArduPilot selalu menjenuhkan elevator ke -1.000. Begitu cradle
+  dilandaikan ke ~21.7 deg, ArduPilot tidak lagi perlu defleksi penuh:
+  terukur hanya mencapai -0.724, ambang tidak pernah tersentuh, dan
+  katapel tidak pernah menembak (log sakti-jsbsim63.csv 2026-10-26 -
+  launch-cmd tetap 0 sepanjang 46 detik, pesawat hanya berputar di tanah).
+  Rencana terbang tidak berpengaruh; SimplePlan yang biasanya berhasil
+  ikut gagal karena penyebabnya ada di pemicu, bukan di misi.
+
+  Pemicu RPM tidak bergantung sudut cradle maupun perilaku kendali
+  ArduPilot. Terukur pada log yang sama:
+      idle stabil     : 1239 RPM (selama 27 detik)
+      throttle dibuka : 2608 RPM -> 9841 RPM dalam ~2 detik
+      maksimum        : 10586 RPM
+  Ambang 3000 berada jauh di atas idle dan jauh di bawah gerbang tembak
+  9500, jadi membentuk tangga dua tahap:
+      3000 RPM -> mulai run-up (fcs/launch-cmd)
+      9500 RPM -> katapel menembak (fcs/launch-armed)
+  Katapel tetap TIDAK bisa menembak sebelum 9500, sehingga ambang 3000
+  yang sensitif pun aman - paling jauh hanya memulai run-up lebih awal.
   ===================================================================
 -->
 <system name="Launcher">
@@ -59,8 +113,10 @@
 
     <!-- ============================================================
          1. LAUNCH COMMAND (latch)
-         0 -> 1 saat ArduPilot arm di AUTO takeoff (elevator penuh).
-         Memulai engine run-up, BELUM menembakkan catapult.
+         0 -> 1 saat operator menekan tombol LAUNCH (rc 7 2000).
+         Katapel tetap menunggu RPM >= 9500 sesudah ini.
+         Lihat "TRIGGER ARM" di kepala berkas untuk jalur sinyalnya
+         dan riwayat pemicu yang pernah dipakai.
          ============================================================ -->
     <switch name="fcs/launch-cmd">
       <default value="0"/>
@@ -68,7 +124,7 @@
         fcs/launch-cmd gt 0.5
       </test>
       <test value="1">
-        fcs/elevator-cmd-norm le -0.9
+        fcs/launch-trigger ge 0.8
       </test>
     </switch>
 
@@ -153,11 +209,10 @@
          E2T terbaca di CTUN.E2T (1.033 di Batujajar, 657 m).
          Jadi 35 m/s asli -> ~33.9 m/s di log. Itu NORMAL & BENAR.
 
-         Catatan: SIM_JSBSim.cpp menulis <elevation> dari home.alt ke
-         reset.xml, jadi JSBSim memakai densitas udara lapangan yang
-         benar (657 m di Batujajar), bukan permukaan laut. Selisih
-         ~3.3% antara angka JSBSim dan log ArduPilot murni berasal
-         dari EAS vs TAS di atas, bukan dari beda densitas.
+         Catatan: JSBSim sendiri dijalankan pada densitas permukaan
+         laut karena SIM_JSBSim.cpp meng-hardcode reset.xml ke
+         altitude 1.3 m (home.alt diabaikan). Itu sebabnya angka
+         JSBSim dan log ArduPilot berselisih ~3.3%.
          ============================================================ -->
     <switch name="fcs/launch-done">
       <default value="0"/>
@@ -167,6 +222,44 @@
       <test logic="AND" value="1">
         fcs/launch-armed  gt 0.5
         velocities/vt-fps ge 137.80
+      </test>
+    </switch>
+
+    <!-- ============================================================
+         4b. HOLDBACK (rem) - menahan pesawat di rel
+         Tanpa ini pesawat merayap & berputar ke kiri saat run-up:
+         rolling_friction contact hanya 0.02 sementara thrust penuh
+         ~47.9 lb (213 N) mendorong maju, dan torsi propeller
+         membelokkannya. Di lapangan pesawat ditahan sear/holdback
+         sampai katapel menembak - ini padanannya.
+
+         Rem AKTIF (1) sejak awal, LEPAS (0) begitu katapel menembak
+         (fcs/launch-armed latch). Karena latch, rem tidak pernah
+         menggigit lagi setelah lepas rel.
+
+         Daya tahan: static_friction 0.80 x berat 494 N = 395 N,
+         jauh di atas komponen horizontal thrust 213 x cos(21.7) =
+         198 N. Roda hidung diubah ke grup CENTER di sakti.xml
+         supaya ikut menahan (sebelumnya NONE = bebas berputar).
+         ============================================================ -->
+    <switch name="fcs/left-brake-cmd-norm">
+      <default value="1"/>
+      <test value="0">
+        fcs/launch-armed gt 0.5
+      </test>
+    </switch>
+
+    <switch name="fcs/right-brake-cmd-norm">
+      <default value="1"/>
+      <test value="0">
+        fcs/launch-armed gt 0.5
+      </test>
+    </switch>
+
+    <switch name="fcs/center-brake-cmd-norm">
+      <default value="1"/>
+      <test value="0">
+        fcs/launch-armed gt 0.5
       </test>
     </switch>
 

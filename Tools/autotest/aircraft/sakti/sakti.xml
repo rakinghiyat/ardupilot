@@ -16,6 +16,10 @@
   <property value="0"> propulsion/magneto_cmd       </property>
   <property value="0"> fcs/throttle-cmd-norm        </property>
   <property value="0"> fcs/throttle-pos-norm        </property>
+  <!-- Tombol LAUNCH manual. Dikirim SIM_JSBSim.cpp dari SERVO7 (indeks 6).
+       WAJIB dideklarasikan di sini: JSBSim membekukan SITL ("link 1 down")
+       kalau menerima "set" untuk properti yang belum dikenal. -->
+  <property value="0"> fcs/launch-trigger           </property>
   <property value="1"> fcs/mixture-cmd-norm         </property>
   <property value="0"> propulsion/engine/set-running </property>
 
@@ -143,18 +147,29 @@
   <ground_reactions>
 
     <!-- ================================================================= -->
-    <!-- LAUNCH CRADLE / RAIL 30 deg                                        -->
+    <!-- LAUNCH CRADLE / RAIL - KALIBRASI MENUJU 20 deg (iterasi 1)         -->
     <!-- Rail launcher dimodelkan sebagai ground contact: cara alami JSBSim -->
     <!-- menahan pesawat (stabil 6-DOF, tanpa gaya buatan).                 -->
-    <!-- Kaki DEPAN panjang (z=-0.752), kaki BELAKANG pendek (z=-0.14)      -->
-    <!-- => pesawat duduk nose-up: atan(0.612/1.06) = 30 deg.               -->
+    <!--                                                                    -->
+    <!-- PENTING: sudut GEOMETRI != sudut TERUKUR. Kontak roda adalah       -->
+    <!-- pegas (nose 1892 N/M, main 1594 N/M), tertekan beda di bawah       -->
+    <!-- beban, jadi sikap istirahat lebih landai dari hitungan geometri.   -->
+    <!-- Terukur di log sakti-jsbsim.csv (kolom attitude/pitch-deg,       -->
+    <!-- saat V=0 sebelum katapel menembak):                                -->
+    <!--     z=-0.871 -> geometri 34.59 deg -> TERUKUR 30.5 deg  (-4.09)    -->
+    <!--                                                                    -->
+    <!-- Iterasi 1 menuju 20 deg terukur: geometri 24.09 deg                -->
+    <!--     dz = 1.06 * tan(24.09) = 0.474 -> z = -(0.14+0.474) = -0.614   -->
+    <!-- CARA VERIFIKASI: jalankan SITL, buka sakti-jsbsim.csv, baca      -->
+    <!-- pitch-deg pada baris terakhir sebelum catapult-lbs berubah dari 0. -->
+    <!-- Kalau belum 20 deg, geser z sesuai selisihnya lalu ulangi.         -->
     <!-- Saat catapult menembak, pesawat meluncur & lepas dari cradle.      -->
     <!-- ================================================================= -->
     <contact type="BOGEY" name="NOSE">
       <location unit="M">
         <x>     0.34    </x>
         <y>     0.00    </y>
-        <z>    -0.871   </z>
+        <z>    -0.614   </z>
       </location>
       <static_friction>  0.80 </static_friction>
       <dynamic_friction> 0.50 </dynamic_friction>
@@ -162,7 +177,9 @@
       <spring_coeff  unit="N/M">      1892.00  </spring_coeff>
       <damping_coeff unit="N/M/SEC">  293.00   </damping_coeff>
       <max_steer unit="DEG"> 0.00 </max_steer>
-      <brake_group> NONE </brake_group>
+      <!-- CENTER (bukan NONE) supaya roda hidung ikut ditahan rem
+           holdback di Systems/launcher.xml saat run-up di rel. -->
+      <brake_group> CENTER </brake_group>
       <retractable> 0 </retractable>
     </contact>
     <contact type="BOGEY" name="LEFT_MAIN">
@@ -1093,14 +1110,11 @@
     <!-- ================================================= -->
     <!-- LAUNCHER / CATAPULT SYSTEM                        -->
     <!-- Spesifikasi:                                      -->
-    <!--   Massa (empty 25,325 + payload 15 + fuel 10)     -->
-    <!--                                : 50,325 kg        -->
+    <!--   Massa (empty+payload+fuel) : ~60 kg            -->
     <!--   Sudut rail (nose up)       : 30 deg (cradle)   -->
-    <!--   Exit speed (Vlo)           : 42 m/s (137.80 fps)-->
-    <!--     (disetel di Systems/launcher.xml, bukan di sini)-->
+    <!--   Exit speed (Vlo)           : 35 m/s (114.83 fps)-->
     <!--   Gaya konstan 875 lbf (~3892 N) =>               -->
-    <!--     a = 3892/50,325 = 77,3 m/s2 (~7,9 g)          -->
-    <!--     PANJANG RAIL ~11,4 m, stroke ~0.54 s          -->
+    <!--     PANJANG RAIL ~10 m, stroke ~0.58 s, ~6.2 g    -->
     <!--   (rail = jarak tempuh selama catapult aktif;     -->
     <!--    diukur dgn integrasi kecepatan, bukan dimodel- -->
     <!--    kan sbg constraint fisik. Gaya lebih kecil =   -->

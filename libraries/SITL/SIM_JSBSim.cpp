@@ -113,6 +113,11 @@ bool JSBSim::create_templates(void)
 "\n"
 "  <run start=\"0\" end=\"10000000\" dt=\"%.6f\">\n"
 "    <property value=\"0\"> simulation/notify-time-trigger </property>\n"
+// ← tambah: tombol LAUNCH manual (dikirim send_servos dari SERVO7).
+// WAJIB dideklarasikan di run-script, bukan cuma di .xml pesawat:
+// kalau JSBSim menerima "set" untuk properti tak dikenal, sisa batch
+// termasuk "iterate 1" dibatalkan -> tidak ada paket FDM -> link 1 down.
+"    <property value=\"0\"> fcs/launch-trigger </property>\n"
 "\n"
 "    <event name=\"start engine\">\n"
 "      <condition> simulation/sim-time-sec le 0.01 </condition>\n"
@@ -375,6 +380,11 @@ void JSBSim::send_servos(const struct sitl_input &input)
     float servo2   = filtered_servo_angle(input, 1);
     float servo3   = filtered_servo_angle(input, 2);
     float throttle = filtered_servo_range(input, 4);
+    // ← tambah: tombol LAUNCH manual dari SERVO7 (indeks 6).
+    // Dibaca Systems/launcher.xml sebagai fcs/launch-trigger.
+    // fcs/launch-trigger WAJIB dideklarasikan di sakti*.xml, kalau tidak
+    // JSBSim menolak perintah "set" properti tak dikenal dan SITL membeku.
+    float launch_sw = filtered_servo_range(input, 6);
 
     float wind_speed_fps = input.wind.speed / FEET_TO_METERS;
 
@@ -383,6 +393,7 @@ void JSBSim::send_servos(const struct sitl_input &input)
         "set fcs/elevator-cmd-norm %f\n"
         "set fcs/rudder-cmd-norm %f\n"
         "set fcs/throttle-cmd-norm %f\n"
+        "set fcs/launch-trigger %f\n"
         "set atmosphere/psiw-rad %f\n"
         "set atmosphere/wind-mag-fps %f\n"
         "set atmosphere/turbulence/milspec/windspeed_at_20ft_AGL-fps %f\n"
@@ -392,6 +403,7 @@ void JSBSim::send_servos(const struct sitl_input &input)
         (double)servo3,
         (double)servo2,
         (double)throttle,
+        (double)launch_sw,
         (double)radians(input.wind.direction),
         (double)wind_speed_fps,
         (double)(wind_speed_fps / 3.0f),

@@ -3,16 +3,12 @@
 <!--
   Berkas pesawat FlightGear untuk sakti.
 
-  Namanya HARUS memakai tanda hubung, "sakti-set.xml": itulah yang dicari
-  FlightGear saat dijalankan dengan opsi baris perintah aircraft=sakti.
-  Tanpa tanda hubung berkas ini tidak akan pernah terbaca.
+  Namanya HARUS "sakti-set.xml" (pakai tanda hubung): itu yang dicari
+  FlightGear ketika dijalankan dengan opsi baris perintah aircraft=sakti.
+  Berkas lama "saktiset.xml" tanpa tanda hubung tidak pernah terbaca, dan
+  jalur modelnya masih menunjuk ke folder sakti.
 
-  FlightGear di sini hanya penampil (<flight-model>external</flight-model>);
-  seluruh fisika dihitung JSBSim lewat ArduPilot SITL.
-
-  Jalankan lewat Tools/autotest/fg_sakti_view.sh, dan pastikan
-  FlightGear/ardupilot_surface.xml sudah disalin ke direktori Protocol/
-  FlightGear - tanpa itu animasi permukaan kendali tidak bekerja.
+  Jalankan lewat Tools/autotest/fg_sakti_view.sh.
 -->
 
 <PropertyList>
