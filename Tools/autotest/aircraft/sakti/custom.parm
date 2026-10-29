@@ -1,47 +1,3 @@
-# =====================================================================
-# sakti - custom.parm   [dasar: run56, dengan koreksi dari run58/59]
-#
-# KOREKSI PENTING dari run58/59:
-#   RLL2SRV_TCONST 0,40 -> 0,75 (custom_v3) TERBUKTI MEMPERBURUK ROLL.
-#   Data cruise lurus WP2->WP3:
-#                    TCONST 0,40 (run56)   TCONST 0,75 (run58)
-#     crosstrack XT sd     4,0 m                7,0 m
-#     NavRoll cmd sd       3,6 deg              9,3 deg
-#     Roll error sd        5,8 deg             11,9 deg
-#     periode osilasi      5,5 s                7,0 s
-#     lag Roll<-NavRoll    1,00 s               1,28 s
-#   Memperlambat loop roll JUSTRU memperparah osilasi. Saya salah menduga
-#   ini "overshoot loop sikap". BUKAN.
-#
-# DIAGNOSA BENAR (terukur di run56/58/59):
-#   Osilasi roll = L1 NAVIGASI BERBURU (hunting), bukan loop sikap.
-#   Bukti tak terbantah:
-#     - crosstrack XT, NavRoll (perintah), dan Roll (aktual) SEMUA
-#       berosilasi di periode SAMA (5,5-7,0 s) -> ini SATU loop tertutup
-#       XT -> NavRoll -> Roll -> XT. Itu definisi L1 berburu.
-#     - saat loop roll DIPERLAMBAT (TCONST naik), lag bertambah 1,00->1,28 s
-#       dan burahnya MEMBURUK (XT 4->7, NavRoll sd 3,6->9,3). Ini ciri
-#       khas loop LUAR menjadi tak stabil ketika loop DALAM tambah lambat.
-#     - korelasi roll-rate vs yaw-rate = +0,34 (POSITIF) -> BUKAN dutch
-#       roll (dutch roll memberi korelasi negatif kuat). Jadi bukan mode
-#       goyang-arah, murni interaksi navigasi<->sikap.
-#   Akar terdalam: wewenang roll airframe LEMAH (adverse yaw memakan ~54%,
-#   tanpa rudder) -> respons roll lamban (~1 s lag) -> loop L1 yang
-#   menutup di sekitarnya jadi berburu. Yang "telat merespons lalu
-#   dibalas arah sebaliknya" yang Anda amati = tepat gejala ini.
-#
-#   PITCH: osilasi pitch adalah GEJALA dari osilasi roll (bank -> ubah
-#   lift -> TECS kejar altitude -> pitch). Loiter pitch-error sd:
-#   run56 5,18 -> run58/59 1,89/2,13. Menenangkan loop navigasi/roll
-#   otomatis menenangkan pitch. Tidak perlu tuning pitch terpisah.
-#
-# STRATEGI v4: perbaiki loop NAVIGASI (sumber osilasi), BUKAN loop sikap.
-#   - kembalikan TCONST ke 0,40 (batalkan perubahan yang merugikan)
-#   - perlambat & redam loop L1 supaya tidak berburu di sekitar respons
-#     roll yang memang lamban
-# =====================================================================
-
-# --- Salinan run56 (tetap) --------------------------------------------
 AIRSPEED_CRUISE   35.000000
 SCALING_SPEED     35.000000
 TECS_SPDWEIGHT    1.00
@@ -54,45 +10,13 @@ TECS_PITCH_MAX    15
 TECS_PITCH_MIN    -15
 PTCH_LIM_MAX_DEG  25
 PTCH_LIM_MIN_DEG  -20
-
-# --- 1. BATALKAN perubahan yang merugikan -----------------------------
-# 0,75 memperburuk roll (tabel di atas). Kembalikan ke nilai run56.
 RLL2SRV_TCONST    0.40
-
-# --- 2. PERBAIKAN UTAMA: tenangkan loop L1 supaya berhenti berburu -----
-# Osilasi sangat peka pada lag: naik lag 0,3 s menggandakan burah. Maka
-# turunkan bandwidth navigasi di bawah bandwidth respons roll dengan
-# memperpanjang periode L1 dan menambah redamannya.
-#   NAVL1_PERIOD 20 -> 25  (loop nav lebih lambat -> margin fasa lebih besar)
-#   NAVL1_DAMPING 0,90 -> 1,00  (redaman turunan lebih tinggi)
-# CATATAN: ini kebalikan total dari v2 (yang memakai NAVL1_PERIOD 14 =
-# lebih agresif) - itulah salah satu sebab v2 berosilasi/crash.
 NAVL1_PERIOD      25
 NAVL1_DAMPING     1.00
-
-# --- 3. Dipertahankan dari run59 (terbukti membantu) ------------------
-# WP_LOITER_RAD 400: radius yang bisa dicapai pada ~20 deg bank
-# (80 m mustahil). RLL2THR 15: throttle FF di belokan, membantu altitude.
-WP_LOITER_RAD     400
+WP_LOITER_RAD     350
 TECS_RLL2THR      15
-
-# =====================================================================
-# JIKA MASIH BERBURU setelah v4 - uji SATU per satu, berurutan:
-#   4a. NAVL1_PERIOD 25 -> 30  (paling aman, lanjutkan menenangkan nav)
-#   4b. RLL2SRV_TCONST 0,40 -> 0,30 (percepat loop roll -> kurangi lag
-#       yang dilihat nav; kebalikan dari v3)
-#   4c. [lanjutan, hati-hati] RLL_RATE_FF 0,237 -> 0,32 : memperkuat
-#       respons roll supaya lag < 1 s. RISIKO: permukaan bergerak lebih
-#       banyak -> adverse yaw bertambah. Uji sendiri, jangan digabung.
-#
-# JANGAN diulang (terbukti merusak):
-#   - RLL2SRV_TCONST NAIK (v3: memperburuk roll)
-#   - NAVL1_PERIOD TURUN / ROLL_LIMIT 40 / WP_RADIUS 60 (v2: crash/osilasi)
-#   - tanda Lift elevon NEGATIF (run57/54: memburuk/crash)
-#
-# TARGET UKUR run berikutnya (fase cruise lurus WP2->WP3):
-#   crosstrack XT sd   : < 3 m   (run56 4,0 ; run58 7,0)
-#   NavRoll cmd sd     : < 3 deg (run56 3,6 ; run58 9,3)
-#   Roll error sd      : < 5 deg (run56 5,8 ; run58 11,9)
-#   loiter: NavRoll mestinya MANTAP ~+20 deg (bukan ayun -20..+20)
-# =====================================================================
+RLL_RATE_D        0.14
+RLL_RATE_P        0.45
+TKOFF_THR_MAX     85
+PTCH2SRV_RMAX_DN  90
+ROLL_LIMIT_DEG    20

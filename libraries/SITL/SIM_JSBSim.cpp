@@ -23,6 +23,8 @@
 #include "SIM_JSBSim.h"
 
 #include <arpa/inet.h>
+#include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -243,12 +245,54 @@ bool JSBSim::start_JSBSim(void)
             exit(1);
         }
 
+        // ← tambah: beri nama berkas CSV keluaran JSBSim dengan nomor urut
+        // supaya log run sebelumnya tidak tertimpa. Nama di <output> pada
+        // berkas pesawat ditimpa oleh --outputlogfile.
+        // Prefiks diambil dari nama model dengan membuang angka di
+        // belakangnya, sehingga varian model bernomor dan model tanpa
+        // nomor memakai deret berkas yang sama dan penomorannya menyambung
+        // (mis. sakti-jsbsim71.csv -> sakti-jsbsim72.csv).
+        char base[64];
+        strncpy(base, jsbsim_model, sizeof(base)-1);
+        base[sizeof(base)-1] = 0;
+        size_t blen = strlen(base);
+        while (blen > 0 && isdigit((unsigned char)base[blen-1])) {
+            base[--blen] = 0;
+        }
+
+        char pattern[80];
+        snprintf(pattern, sizeof(pattern), "%s-jsbsim", base);
+        const size_t plen = strlen(pattern);
+
+        // cari nomor tertinggi yang sudah ada; berkas arsip seperti
+        // "sakti-jsbsim65_BASELINE.csv" tidak cocok dengan "%u.csv"
+        // sehingga otomatis terlewati.
+        unsigned highest = 0;
+        DIR *dir = opendir(".");
+        if (dir != nullptr) {
+            struct dirent *ent;
+            while ((ent = readdir(dir)) != nullptr) {
+                if (strncmp(ent->d_name, pattern, plen) != 0) {
+                    continue;
+                }
+                unsigned n = 0;
+                if (sscanf(ent->d_name + plen, "%u.csv", &n) == 1 && n > highest) {
+                    highest = n;
+                }
+            }
+            closedir(dir);
+        }
+
+        char *outputlog;
+        asprintf(&outputlog, "--outputlogfile=%s-jsbsim%u.csv", base, highest + 1);
+
         int ret = execlp("JSBSim",
                          "JSBSim",
                          "--suspend",
                          rate,
                          nice,
                          logdirective,
+                         outputlog,
                          script,
                          nullptr);
         if (ret != 0) {

@@ -75,7 +75,7 @@
   Rumus: faktor = konsumsi_baru / konsumsi_lama. Menskala keduanya
   bersamaan menjaga daya tetap; menskala salah satu saja akan
   menggeser performa terbang.
-  Verifikasi: berkas fuel_check.xml di folder kerja lokal
+  Verifikasi: Tools/autotest/aircraft/sakti/fuel_check.xml
   ===================================================================
 -->
 

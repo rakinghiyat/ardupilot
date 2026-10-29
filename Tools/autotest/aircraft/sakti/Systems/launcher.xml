@@ -23,7 +23,7 @@
                         (lihat channel Throttle di sakti.xml)
     3. MESIN SIAP    -> fcs/launch-armed = 1 saat RPM >= 9500,
                         catapult baru menembak
-    4. EXIT SPEED    -> fcs/launch-done  = 1 saat 35 m/s (114.83 fps),
+    4. EXIT SPEED    -> fcs/launch-done  = 1 saat 38 m/s (124.67 fps),
                         catapult lepas & throttle kembali ke ArduPilot
 
   Kenapa run-up dulu baru tembak? Spool-up mesin butuh waktu.
@@ -89,7 +89,7 @@
   ArduPilot selalu menjenuhkan elevator ke -1.000. Begitu cradle
   dilandaikan ke ~21.7 deg, ArduPilot tidak lagi perlu defleksi penuh:
   terukur hanya mencapai -0.724, ambang tidak pernah tersentuh, dan
-  katapel tidak pernah menembak (log sakti-jsbsim63.csv 2026-10-26 -
+  katapel tidak pernah menembak (log sakti-jsbsim.csv 2026-10-26 -
   launch-cmd tetap 0 sepanjang 46 detik, pesawat hanya berputar di tanah).
   Rencana terbang tidak berpengaruh; SimplePlan yang biasanya berhasil
   ikut gagal karena penyebabnya ada di pemicu, bukan di misi.
@@ -165,8 +165,27 @@
 
     <!-- ============================================================
          3. LAUNCH ARMED (latch) - CATAPULT MENEMBAK
-         Menunggu mesin mencapai daya launch (RPM >= 9500 = ~95%
-         dari 9954 RPM maks), baru catapult dilepas.
+         Menunggu mesin mencapai daya launch, baru catapult dilepas.
+
+         AMBANG DITURUNKAN 9500 -> 7000 (2026-10-27).
+         9500 dipilih saat throttle takeoff masih 100% (RPM maks 10586
+         terukur, jadi 9500 = ~90%). Setelah TKOFF_THR_MAX disetel 85,
+         RPM maksimum hanya 8234 -> gerbang tidak pernah terlampaui,
+         launch-armed tetap 0, katapel tidak pernah menembak
+         (log 00000072 / sakti-jsbsim.csv: launch-cmd=1 tapi
+         launch-armed=0 sepanjang run).
+
+         Ini jebakan yang sama kelasnya dengan pemicu elevator lama:
+         ambang MUTLAK yang diam-diam terikat parameter lain.
+
+         7000 dipilih agar tahan terhadap perubahan batas throttle:
+             throttle 100% -> RPM 10586  lolos
+             throttle  85% -> RPM  8234  lolos
+             throttle  80% -> RPM  7700  lolos
+             throttle  75% -> RPM  7100  lolos
+             idle          -> RPM  1239  terblokir (aman)
+         Kalau TKOFF_THR_MAX diturunkan di bawah ~75%, ambang ini HARUS
+         ditinjau ulang lagi.
          ============================================================ -->
     <switch name="fcs/launch-armed">
       <default value="0"/>
@@ -175,7 +194,7 @@
       </test>
       <test logic="AND" value="1">
         fcs/launch-cmd                  gt 0.5
-        propulsion/engine[0]/engine-rpm ge 9500
+        propulsion/engine[0]/engine-rpm ge 7000
       </test>
     </switch>
 
@@ -186,7 +205,7 @@
 
          >>> UBAH KECEPATAN LAUNCH DI SINI <<<
              Rumus: fps = kecepatan(m/s) x 3.28084
-             Nilai sekarang: 42 m/s x 3.28084 = 137.80 fps
+             Nilai sekarang: 38 m/s x 3.28084 = 124.67 fps
 
              KENAPA DINAIKKAN 35 -> 42 m/s (analisa log 00000050):
                Pesawat baru sanggup MENANJAK pada ~37 m/s.
@@ -221,7 +240,7 @@
       </test>
       <test logic="AND" value="1">
         fcs/launch-armed  gt 0.5
-        velocities/vt-fps ge 137.80
+        velocities/vt-fps ge 124.67
       </test>
     </switch>
 

@@ -51,33 +51,49 @@
   <!-- ada di <flight_control> sakti.xml), sehingga nilainya -->
   <!-- masih 0 saat dibaca -> trim tidak pernah aktif.        -->
   <!--                                                        -->
-  <!-- GAIN K=0.33 : DIKALIBRASI DARI LOG TERBANG SUNGGUHAN     -->
-  <!-- (autopilot aktif, bukan standalone):                       -->
-  <!-- K=0.20 : dipilih dari perbandingan log terbang, tuning roll  -->
-  <!-- 90/T0.4 yang sama:                                           -->
-  <!--   K       puncakKiri overshoot settle   RMS    bias          -->
-  <!--   0.20     -18.2      +23.4    6.00s   10.86  +0.61  <- pakai-->
-  <!--   0.33     -16.9      +25.9      -     11.40  +1.60          -->
-  <!--   0.45     -17.4      +27.3    7.97s     -      -            -->
-  <!-- K besar memang memangkas roll di titik release (-12.6 deg     -->
-  <!-- tanpa trim -> -2.6 deg pada K=0.45), TAPI overshoot & settle  -->
-  <!-- justru memburuk. Dinamika sesudah release lebih menentukan    -->
-  <!-- daripada roll di titik release.                               -->
+  <!-- GAIN K=0.20. JANGAN DINAIKKAN LAGI - sudah diuji 3x.          -->
   <!--                                                               -->
-  <!-- CATATAN KETERBATASAN: selama stroke qbar sangat rendah,        -->
-  <!-- sehingga K x torsi / qbar selalu menabrak <clipto> +-0.5.      -->
-  <!-- Akibatnya nilai K TIDAK berpengaruh selama stroke - elevon     -->
-  <!-- kiri mentok -18 deg apa pun K-nya. K baru terasa setelah qbar  -->
-  <!-- naik. Kalau ingin K berpengaruh sejak di rail, naikkan batas   -->
-  <!-- bawah qbar (nilai 3.0 di bawah) supaya tidak saturasi.         -->
-  <!--                                                               -->
-  <!-- Trim TIDAK menyebabkan yaw saat launch. Yaw berasal dari efek  -->
-  <!-- GIROSKOPIK baling-baling saat pesawat menunduk cepat setelah   -->
-  <!-- lepas rail (JSBSim: vMn = PQR x H, FGPropeller.cpp).           -->
-  <!-- Korelasi laju pitch vs sideslip = +0.909. Hitungan: momen giro -->
-  <!-- 12.7 lb.ft / stabilitas arah 97.4 lb.ft/rad = 7.5 deg.         -->
-  <!-- Dikurangi lewat PTCH2SRV_RMAX_DN (batasi laju menunduk),       -->
-  <!-- bukan lewat trim.                                             -->
+  <!-- SWEEP LAMA (era RLL_RATE_D 0.09, throttle launch 100%):        -->
+  <!--   K       puncakKiri overshoot settle   RMS    bias            -->
+  <!--   0.20     -18.2      +23.4    6.00s   10.86  +0.61  <- dipilih-->
+  <!--   0.33     -16.9      +25.9      -     11.40  +1.60            -->
+  <!--   0.45     -17.4      +27.3    7.97s     -      -              -->
+  <!--                                                                 -->
+  <!-- DIUJI ULANG DI 0.33 PADA run75 - DAN GAGAL LAGI.                -->
+  <!-- Alasan uji ulang waktu itu (dua syarat penolakan lama dianggap  -->
+  <!-- sudah tidak berlaku: clip tak lagi menggigit setelah            -->
+  <!-- TKOFF_THR_MAX 85, dan overshoot sudah diperbaiki lewat          -->
+  <!-- RLL_RATE_D 0.14) ternyata TIDAK menyelamatkan K=0.33.           -->
+  <!--                                                                 -->
+  <!-- run74 vs run75 - HANYA K yang berbeda (ada WP2, p1=0):          -->
+  <!--   sd roll t+25..60 : 0.658 (K=0.20) -> 1.243 (K=0.33)  1.9x     -->
+  <!--   bin 30-40 s      : 0.271          -> 1.675           6x       -->
+  <!--   bin 40-50 s      : 0.135          -> 0.842           6x       -->
+  <!-- Dikuatkan run76 (K=0.33 juga): bin 30-40 s = 2.817.             -->
+  <!-- Puncak kiri memang membaik (-20.1 -> -17.7) tapi itu di dalam   -->
+  <!-- noise floor +-40%, sedangkan kerusakan settle 6x jauh di luar.  -->
+  <!--                                                                 -->
+  <!-- PELAJARAN METODOLOGI: kriteria gagal run75 hanya melihat        -->
+  <!-- jendela launch (0-15 s), sehingga kerusakan di t+30..60 lolos   -->
+  <!-- dari pemeriksaan. Pakai dekomposisi per-bin 10 s untuk SELURUH  -->
+  <!-- penerbangan, bukan satu angka RMS jendela launch.               -->
+  <!--                                                                 -->
+  <!-- Hipotesis "defisit 37% ditutup integrator" (dasar angka 0.33)   -->
+  <!-- GUGUR: K naik 65% hanya menggeser puncak kiri 12%.              -->
+  <!--                                                                 -->
+  <!-- SIDESLIP BUKAN URUSAN TRIM INI. Diukur di run73/74/75/76 beta   -->
+  <!-- puncak = 7.55 / 7.73 / 7.76 / 7.66 deg - praktis KONSTAN walau  -->
+  <!-- q, param1 NAV_TAKEOFF dan K semuanya berubah. Momen roll dari   -->
+  <!-- sideslip -31 lbs.ft (Clbeta -4.007 lbs.ft/deg, regresi R2=0.989)-->
+  <!-- yaitu 5.8x torsi prop -5.4 lbs.ft. Trim ini hanya bisa melawan  -->
+  <!-- bagian -5.4 itu; menaikkan K TIDAK AKAN menyentuh yang -31.     -->
+  <!--                                                                 -->
+  <!-- CATATAN: klaim lama "korelasi laju pitch vs sideslip = +0.909"  -->
+  <!-- tidak lagi didukung sebagai sebab-akibat. Di run76 q turun 17%  -->
+  <!-- (param1 0->12, galat pitch awal -45%) tetapi beta hanya turun   -->
+  <!-- 1.3%. Jadi PTCH2SRV_RMAX_DN kemungkinan besar TIDAK akan        -->
+  <!-- mengurangi sideslip. Sumber yaw sebenarnya belum teridentifikasi-->
+  <!-- lihat PRD-06 sec 4j.                                            -->
   <!-- CARA MENYETEL: ubah nilai K di kedua <value> di bawah    -->
   <!-- (AT LO positif, AT RO negatif, besarnya sama).            -->
   <!--   K terlalu KECIL -> masih roll ke KIRI                   -->

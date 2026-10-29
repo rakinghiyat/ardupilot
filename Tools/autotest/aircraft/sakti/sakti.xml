@@ -147,7 +147,7 @@
   <ground_reactions>
 
     <!-- ================================================================= -->
-    <!-- LAUNCH CRADLE / RAIL - KALIBRASI MENUJU 20 deg (iterasi 1)         -->
+    <!-- LAUNCH CRADLE / RAIL - TARGET SAAT INI 15 deg (iterasi 2 dipakai)  -->
     <!-- Rail launcher dimodelkan sebagai ground contact: cara alami JSBSim -->
     <!-- menahan pesawat (stabil 6-DOF, tanpa gaya buatan).                 -->
     <!--                                                                    -->
@@ -160,16 +160,49 @@
     <!--                                                                    -->
     <!-- Iterasi 1 menuju 20 deg terukur: geometri 24.09 deg                -->
     <!--     dz = 1.06 * tan(24.09) = 0.474 -> z = -(0.14+0.474) = -0.614   -->
-    <!-- CARA VERIFIKASI: jalankan SITL, buka sakti-jsbsim.csv, baca      -->
+    <!-- CARA VERIFIKASI: jalankan SITL, buka sakti-jsbsim<N>.csv, baca     -->
     <!-- pitch-deg pada baris terakhir sebelum catapult-lbs berubah dari 0. -->
-    <!-- Kalau belum 20 deg, geser z sesuai selisihnya lalu ulangi.         -->
+    <!-- Kalau belum sesuai target, geser z sesuai selisihnya lalu ulangi.  -->
     <!-- Saat catapult menembak, pesawat meluncur & lepas dari cradle.      -->
+    <!--                                                                    -->
+    <!-- ITERASI 3 (12 deg, z=-0.395) DIUJI DI run87 DAN DITOLAK.          -->
+    <!--   Sikap rilis tepat sasaran (12.19 deg), tapi hasilnya campuran:  -->
+    <!--     beta    5.24 -> 4.77  (-9%, sesuai prediksi 4.43)             -->
+    <!--     heading -7.39 -> -6.99 (-5%)                                  -->
+    <!--     puncak roll -5.20 -> -5.63 (+8% MEMBURUK)                     -->
+    <!--   Dua metrik bergerak berlawanan dan semuanya di bawah 10%:       -->
+    <!--   TUAS dTheta SUDAH JENUH. Dikembalikan ke 15 deg karena puncak   -->
+    <!--   roll lebih baik di sana dan lintasan lebih curam memberi jarak  -->
+    <!--   aman medan yang lebih besar, tanpa ongkos terukur.              -->
+    <!--   JANGAN diturunkan lagi tanpa bukti baru. Lihat PRD-06 sec 5c.   -->
+    <!--                                                                   -->
+    <!--   Tuas TKOFF_THR_MAX 85->70 juga DIBATALKAN (tidak pernah         -->
+    <!--   diterbangkan): batas 85 sudah menggigit 51% waktu panjat dan    -->
+    <!--   kecepatan sudah 33 m/s, jadi menurunkannya mencekik 18 detik    -->
+    <!--   panjat demi 2 detik transien. Lihat PRD-06 sec 5b.              -->
+    <!--                                                                    -->
+    <!-- ITERASI 2 (run83..86): target 15 deg, z = -0.462. Terukur 15.60.  -->
+    <!-- ITERASI 2 - ALASAN turun dari 21.4 deg:                           -->
+    <!-- ALASAN - ini keputusan desain launcher, bukan tuning:              -->
+    <!--   Impuls yaw giroskopik saat transisi launch = H x dTheta, dengan  -->
+    <!--   H = 40.6 N.m.s (prop) dan dTheta = sudut cradle - sikap jelajah. -->
+    <!--   dTheta HARUS ditempuh, jadi impuls itu tidak bisa dihapus oleh   -->
+    <!--   tuning autopilot apa pun - hanya bisa dikecilkan lewat dTheta.   -->
+    <!--   Semua tuas autopilot sudah habis & gagal: PTCH2SRV_RMAX_DN       -->
+    <!--   (run81), NAV_TAKEOFF param1 (run77), TKOFF_ROTATE_SPD (tertutup  -->
+    <!--   oleh rentang -5..10 deg), kendala pitch rel C3 (run82, hanya     -->
+    <!--   memindahkan impuls). Tidak ada permukaan kendali yaw.            -->
+    <!--   Lihat PRD-06 sec 4s.                                             -->
+    <!--                                                                    -->
+    <!-- HITUNGAN: rasio sikap-terukur/geometri = 21.4/24.09 = 0.888        -->
+    <!--   (pegas kontak termampat, jadi sikap nyata < sudut geometris)     -->
+    <!--   Rasio ini TERVALIDASI di run83: target 15 -> terukur 15.60.      -->
     <!-- ================================================================= -->
     <contact type="BOGEY" name="NOSE">
       <location unit="M">
         <x>     0.34    </x>
         <y>     0.00    </y>
-        <z>    -0.614   </z>
+        <z>    -0.462   </z>
       </location>
       <static_friction>  0.80 </static_friction>
       <dynamic_friction> 0.50 </dynamic_friction>
@@ -1111,7 +1144,9 @@
     <!-- LAUNCHER / CATAPULT SYSTEM                        -->
     <!-- Spesifikasi:                                      -->
     <!--   Massa (empty+payload+fuel) : ~60 kg            -->
-    <!--   Sudut rail (nose up)       : 30 deg (cradle)   -->
+    <!--   Sudut rail (nose up)       : 15 deg (cradle,   -->
+    <!--     21.4 -> 15. Iterasi 12 deg DITOLAK di run87. -->
+    <!--     Diatur lewat z kontak NOSE, bukan di sini.)  -->
     <!--   Exit speed (Vlo)           : 35 m/s (114.83 fps)-->
     <!--   Gaya konstan 875 lbf (~3892 N) =>               -->
     <!--     PANJANG RAIL ~10 m, stroke ~0.58 s, ~6.2 g    -->
@@ -1135,9 +1170,19 @@
           <value> 875 </value>
         </product>
       </function>
+      <!-- y HARUS sama dengan CG lateral, jangan dikembalikan ke 0.00.
+           CG lateral efektif saat launch (kosong 25.325 kg @ -0.00233,
+           payload 15 kg @ 0, fuel 10 kg @ -0.003314) = -0.001831 m.
+           Dengan gaya di y=0 dan CG di y=-0.001831, gaya 875 lbf
+           menghasilkan momen yaw -7.13 N.m (hidung ke KIRI) selama
+           SELURUH stroke 0.495 s -> r = -0.154 rad/s sudah tertanam
+           sebelum pesawat lepas rel. Itu 59% dari r terukur -0.292,
+           dan sumber sideslip 7.7 deg yang kebal terhadap semua tuning
+           autopilot (terbukti run73/74/75/76/77: beta 7.55..7.81 deg
+           walau param1, K dan q berubah). Lihat PRD-06 sec 4l. -->
       <location unit="M">
         <x> 1.10 </x>
-        <y> 0.00 </y>
+        <y> -0.001831 </y>
         <z> 0.00 </z>
       </location>
       <direction>
@@ -1173,6 +1218,125 @@
       </direction>
     </force>
 
+    <!-- ================================================= -->
+    <!-- LAUNCH RAIL YAW CONSTRAINT (C2)                   -->
+    <!--                                                   -->
+    <!-- rail_side di atas hanya meredam KECEPATAN LATERAL -->
+    <!-- (v). Tidak ada yang menahan YAW (r), padahal rel  -->
+    <!-- peluncur nyata menahan pesawat lurus selama       -->
+    <!-- stroke. Akibatnya pesawat memutar bebas 0,495 s   -->
+    <!-- dan sudah membawa r = -0,162 rad/s saat lepas rel -->
+    <!-- (run79, sesudah perbaikan lokasi gaya katapel).   -->
+    <!-- Itu jadi sideslip 5,8 deg -> momen roll dihedral  -->
+    <!-- -23 lbs.ft -> roll kiri -12,45 deg dan simpangan  -->
+    <!-- heading -9,47 deg dari sudut launch 180 deg.      -->
+    <!--                                                   -->
+    <!-- GEOMETRI: gaya arah +y di hidung (x=0,34 struct). -->
+    <!-- CG di x=1,109 -> lengan 0,769 m DI DEPAN CG.      -->
+    <!--   N = +0,769 x Fy  (positif = hidung ke KANAN)    -->
+    <!-- Untuk melawan r negatif (hidung kiri) perlu N     -->
+    <!-- positif, jadi Fy = -k x r. Dari situ tanda -100.  -->
+    <!--                                                   -->
+    <!-- PENYETELAN k = 100 lbf per rad/s:                 -->
+    <!--   kekakuan = 0,769 m x 100 lbf = 342 N.m/(rad/s)  -->
+    <!--   gangguan sisa terukur         = 7,33 N.m        -->
+    <!--   -> r setimbang = 7,33/342     = 0,021 rad/s     -->
+    <!--      (dari 0,162, yaitu -87%)                     -->
+    <!--   konstanta waktu = Izz/kekakuan = 22,97/342      -->
+    <!--                   = 0,067 s                       -->
+    <!-- Itu ~80 langkah pada laju JSBSim SITL, jadi kaku  -->
+    <!-- cukup untuk menahan tapi tidak bikin integrator   -->
+    <!-- goyah. JANGAN naikkan k jauh di atas ini tanpa    -->
+    <!-- memeriksa kestabilan numerik.                     -->
+    <!--                                                   -->
+    <!-- Pakai velocities/r-rad_sec (laju yaw BADAN), -->
+    <!-- bukan r-aero-rad_sec: kendala rel bersifat        -->
+    <!-- mekanis, tidak ada hubungannya dengan angin.      -->
+    <!-- Lihat PRD-06 sec 4n.                              -->
+    <!-- ================================================= -->
+
+    <force name="rail_yaw" frame="BODY">
+      <function name="forces/rail-yaw-lbs">
+        <product>
+          <property>fcs/launch-active</property>
+          <value> -100.0 </value>
+          <property>velocities/r-rad_sec</property>
+        </product>
+      </function>
+      <location unit="M">
+        <x> 0.34 </x>
+        <y> 0.00 </y>
+        <z> 0.00 </z>
+      </location>
+      <direction>
+        <x> 0 </x>
+        <y> 1 </y>
+        <z> 0 </z>
+      </direction>
+    </force>
+
+    <!-- ================================================= -->
+    <!-- LAUNCH RAIL PITCH CONSTRAINT (C3)                 -->
+    <!--                                                   -->
+    <!-- Celah yang sama bentuknya dengan C2: rel menahan   -->
+    <!-- lateral (rail_side) dan yaw (rail_yaw), tapi TIDAK -->
+    <!-- menahan PITCH. Rel nyata menahan ketiganya.        -->
+    <!--                                                   -->
+    <!-- Akibat tanpa kendala ini (terukur run81):          -->
+    <!--   NAV_TAKEOFF p1=0 -> DesPitch 4 deg, sikap rel    -->
+    <!--   21,7 deg -> autopilot mendorong nose-down        -->
+    <!--   (elev_cmd -0,20) pada t+0,2..0,4 SELAGI DI REL.  -->
+    <!--   Pesawat berputar bebas dan membawa q = -0,29     -->
+    <!--   rad/s saat lepas rel. Sesudah itu momen aero     -->
+    <!--   sudah POSITIF (+11,6 N.m, mendorong naik) tapi   -->
+    <!--   q tetap negatif - sudah jadi inersia.            -->
+    <!--   Lewat presesi giroskopik (sec 4p) q itu jadi     -->
+    <!--   sideslip: beta = H x q / N_beta.                 -->
+    <!--                                                   -->
+    <!-- Itu juga kenapa PTCH2SRV_RMAX_DN 8 GAGAL (run81):  -->
+    <!-- membatasi laju yang DIMINTA tidak bisa membatalkan -->
+    <!-- momentum yang sudah terlanjur diberikan di rel.    -->
+    <!--                                                   -->
+    <!-- GEOMETRI: gaya arah +z (ke BAWAH) di hidung        -->
+    <!-- (x=0,34 struct), lengan 0,769 m DI DEPAN CG.       -->
+    <!--   M_y = -0,769 x Fz   (positif = hidung NAIK)      -->
+    <!-- Untuk melawan q negatif (menunduk) perlu M_y       -->
+    <!-- positif, jadi Fz = +k x q. Dari situ tanda +150.   -->
+    <!-- (Perhatikan: tanda BERLAWANAN dengan rail_yaw,     -->
+    <!--  karena sumbu z badan menunjuk ke bawah.)          -->
+    <!--                                                   -->
+    <!-- PENYETELAN k = 150 lbf per rad/s:                  -->
+    <!--   kekakuan = 0,769 m x 150 lbf = 513 N.m/(rad/s)   -->
+    <!--   gangguan terukur              = 16,7 N.m         -->
+    <!--   -> q setimbang = 16,7/513     = 0,033 rad/s      -->
+    <!--      (dari 0,289, yaitu -89%)                      -->
+    <!--   konstanta waktu = Iyy/kekakuan = 26,04/513       -->
+    <!--                   = 0,051 s                        -->
+    <!-- Lebih kaku dari rail_yaw tapi masih ~60 langkah.   -->
+    <!-- Kalau muncul getaran pada q, turunkan ke 80.       -->
+    <!-- Lihat PRD-06 sec 4r.                               -->
+    <!-- ================================================= -->
+
+    <force name="rail_pitch" frame="BODY">
+      <function name="forces/rail-pitch-lbs">
+        <product>
+          <property>fcs/launch-active</property>
+          <value> 150.0 </value>
+          <property>velocities/q-rad_sec</property>
+        </product>
+      </function>
+      <location unit="M">
+        <x> 0.34 </x>
+        <y> 0.00 </y>
+        <z> 0.00 </z>
+      </location>
+      <direction>
+        <x> 0 </x>
+        <y> 0 </y>
+        <z> 1 </z>
+      </direction>
+    </force>
+
   </external_reactions>
 
   <!-- rate = jumlah baris data per detik.
@@ -1197,6 +1361,10 @@
     <property>fcs/launch-done</property>
     <property>fcs/launch-active</property>
     <property>forces/catapult-lbs</property>
+    <property>forces/rail-yaw-lbs</property>
+    <property>velocities/r-rad_sec</property>
+    <property>forces/rail-pitch-lbs</property>
+    <property>velocities/q-rad_sec</property>
 
 
     <!-- SIMULATION TIME / FRAME -->
